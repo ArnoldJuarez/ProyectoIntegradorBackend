@@ -1,0 +1,51 @@
+# ── SECRETOS ──────────────────────────────────────────────────
+#
+# application-local.yml lleva la contrasena de PostgreSQL, el TICKET_SECRET que
+# firma los QR de las entradas y el AUTH_SECRET que firma las sesiones. Nunca
+# a git.
+#
+# Estaba protegido por el .gitignore de la raiz cuando backend y frontend vivian
+# en el mismo repositorio. Al separarlos, ese archivo dejo de existir y este
+# quedo sin cubrirlo: se detecto antes del primer push.
+application-local.yml
+application-local.properties
+.env
+.env.local
+
+# ── Maven ─────────────────────────────────────────────────────
+HELP.md
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# ── Herramientas ──────────────────────────────────────────────
+.claude
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/

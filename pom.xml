@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<!--
+		Spring Boot 3.5.3.
+
+		start.spring.io ofrecia 4.1.1.RELEASE, pero ese artefacto no esta en Maven
+		Central y la compilacion no resuelve el POM padre. 3.5.3 es la ultima
+		version que existe de verdad en el repositorio, que es lo que manda.
+	-->
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>3.5.3</version>
+		<relativePath/>
+	</parent>
+
+	<groupId>pe.ssiomama</groupId>
+	<artifactId>backend</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>backend</name>
+	<description>API de Ssiomama - entradas, panel y puerta</description>
+
+	<properties>
+		<!--
+			Java 21 (LTS) aunque el JDK instalado sea el 24: se compila apuntando
+			a 21, asi que el resultado corre en cualquier JDK 21 o superior.
+			Fijarlo en 24 obligaria a todo el equipo y al docente a tener
+			exactamente ese JDK.
+		-->
+		<java.version>21</java.version>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-jpa</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-validation</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
+
+		<!--
+			Flyway: a partir de ahora el dueno del esquema es este proyecto, no el
+			Prisma del proyecto anterior. La version la fija el BOM de Spring
+			Boot, por eso no lleva <version>. flyway-database-postgresql hace
+			falta desde Flyway 10: el soporte de cada motor vive en su propio
+			artefacto y sin el no arranca contra PostgreSQL.
+		-->
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-core</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-database-postgresql</artifactId>
+		</dependency>
+
+		<!--
+			scrypt. Java no lo trae de serie y las contrasenas que ya estan en la
+			base se hashearon con el scrypt de Node, asi que hay que reproducirlo
+			exactamente para que el personal pueda seguir entrando. Spring
+			Security tiene SCryptPasswordEncoder, pero usa su propio formato
+			($e0801$...) y aqui el formato es scrypt:salt:derivada.
+		-->
+		<dependency>
+			<groupId>org.bouncycastle</groupId>
+			<artifactId>bcprov-jdk18on</artifactId>
+			<version>1.80</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-devtools</artifactId>
+			<scope>runtime</scope>
+			<optional>true</optional>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.springframework.boot</groupId>
+				<artifactId>spring-boot-maven-plugin</artifactId>
+			</plugin>
+		</plugins>
+	</build>
+
+</project>

@@ -1,0 +1,102 @@
+spring:
+  application:
+    name: ssiomama-backend
+
+  profiles:
+    # En tu maquina se activa solo el perfil 'local', que lee los secretos de
+    # application-local.yml (ese archivo no va a git). Asi `./mvnw
+    # spring-boot:run` funciona a secas, sin escribir variables cada vez.
+    #
+    # En cualquier otro sitio se pone SPRING_PROFILES_ACTIVE y manda eso.
+    active: ${SPRING_PROFILES_ACTIVE:local}
+
+  datasource:
+    # La misma base `discoteca` que dejo el proyecto anterior: los datos reales
+    # ya estan ahi (eventos, clientes, ventas, arqueos) y no tiene sentido
+    # empezar con una vacia. Lo que cambia es quien manda en el esquema: a
+    # partir de aqui, Flyway.
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:discoteca}
+    username: ${DB_USER:postgres}
+    # Sin valor por defecto a proposito: si falta, falla al arrancar y lo dice.
+    # Ponla en la variable de entorno DB_PASSWORD o en application-local.yml.
+    password: ${DB_PASSWORD}
+
+  flyway:
+    enabled: true
+    # La base ya existe con sus 43 tablas y con datos dentro. Sin esto, Flyway
+    # se encuentra un esquema poblado sin su tabla de historial y se niega a
+    # seguir. Con esto la adopta: la marca como version 1 ya aplicada y no
+    # ejecuta V1__esquema_inicial.sql.
+    #
+    # Sobre una base VACIA el comportamiento es el otro: no hay nada que
+    # adoptar, asi que V1 si se ejecuta y crea el esquema entero. Es lo que
+    # permite que alguien clone el repo y arranque sin tener nada montado.
+    baseline-on-migrate: true
+    baseline-version: 1
+    baseline-description: "Esquema heredado del proyecto Prisma"
+
+  jpa:
+    hibernate:
+      # NUNCA 'update' ni 'create'. Quien crea y altera tablas es Flyway, con
+      # migraciones versionadas que se revisan en el diff. Si Hibernate pudiera
+      # tocar el esquema, una entidad mal mapeada borraria columnas con datos
+      # reales dentro. 'validate' solo comprueba que las entidades cuadran con
+      # las tablas, y si no cuadran no arranca.
+      ddl-auto: validate
+      naming:
+        # Spring Boot trae de serie CamelCaseToUnderscoresNamingStrategy, que
+        # reescribe los nombres a snake_case en minusculas: convierte la tabla
+        # Product en 'product' y la columna costCents en 'cost_cents' IGNORANDO
+        # lo que digan las anotaciones @Table y @Column.
+        #
+        # El esquema heredado respeta el camelCase de los modelos, asi que esa
+        # estrategia no encuentra nada. La estandar usa los nombres tal y como
+        # estan escritos, que es lo unico que sirve aqui.
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+    # La sesion no sigue abierta mientras se serializa la respuesta: obliga a
+    # decidir en el servicio que se carga, en vez de disparar consultas sueltas
+    # al renderizar el JSON.
+    open-in-view: false
+    properties:
+      hibernate:
+        # Las tablas se llaman "Product" y las columnas "costCents": en
+        # PostgreSQL un identificador sin comillas se pliega a minusculas, asi
+        # que sin esto Hibernate buscaria tablas que no existen.
+        globally_quoted_identifiers: true
+
+        jdbc:
+          # TODAS las fechas se leen y escriben en UTC.
+          #
+          # Las columnas son 'timestamp without time zone' y guardan el instante
+          # en UTC: la apertura de puertas de las 23:30 en Lima esta como
+          # 04:30 del dia siguiente. Es lo que asume el sistema anterior.
+          #
+          # Sin esta linea, Hibernate interpreta ese texto sin zona en la del
+          # sistema operativo, y en una maquina en Lima las puertas se irian
+          # CINCO HORAS. Y no falla en ningun sitio: simplemente todas las horas
+          # de la web salen mal.
+          time_zone: UTC
+
+server:
+  port: ${SERVER_PORT:8080}
+
+ssiomama:
+  # Firma de los QR de las entradas. Tiene que ser EXACTAMENTE el mismo valor
+  # que uso el proyecto anterior, o las entradas ya vendidas no validan en la
+  # puerta.
+  ticket-secret: ${TICKET_SECRET}
+  # Firma la cookie de sesion. Mismo valor que el proyecto anterior, o el
+  # personal tiene que volver a entrar. Es una clave DISTINTA de la anterior:
+  # con una sola, quien consiguiera un QR tendria material para atacar tambien
+  # las sesiones.
+  auth-secret: ${AUTH_SECRET}
+  # La cookie solo se marca Secure sobre HTTPS. En desarrollo se sirve por HTTP
+  # plano y marcarla haria que el navegador la descartara sin decir nada.
+  cookie-segura: ${COOKIE_SEGURA:false}
+  # De donde se aceptan peticiones del navegador. El React de Vite vive en 5173.
+  cors-origins: ${CORS_ORIGINS:http://localhost:5173}
+
+logging:
+  level:
+    org.hibernate.SQL: ${SQL_LOG:info}
+    org.flywaydb: info
