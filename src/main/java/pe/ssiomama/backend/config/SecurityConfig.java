@@ -149,7 +149,11 @@ public class SecurityConfig {
                          * correos, telefonos, cuanto se gastan— y no salen de
                          * direccion y jefatura de sala.
                          */
-                        .requestMatchers("/api/inventario/**", "/api/eventos/**", "/api/clientes/**")
+                        .requestMatchers(
+                                "/api/inventario/**",
+                                "/api/eventos/**",
+                                "/api/clientes/**",
+                                "/api/caja/**")
                         .hasAnyAuthority(autoridades(Rol.PANEL))
 
                         .anyRequest().denyAll())

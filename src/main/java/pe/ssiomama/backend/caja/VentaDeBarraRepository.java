@@ -1,0 +1,36 @@
+package pe.ssiomama.backend.caja;
+
+import java.util.List;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+public interface VentaDeBarraRepository extends JpaRepository<VentaDeBarra, String> {
+
+    /** Los cobros de un arqueo, del más reciente al más antiguo. */
+    @Query("""
+            select v from VentaDeBarra v
+            where v.arqueo.id = :idArqueo
+            order by v.creadaEn desc
+            """)
+    List<VentaDeBarra> buscarPorArqueo(@Param("idArqueo") String idArqueo);
+
+    /**
+     * Cuánto se cobró por cada método de pago en un arqueo.
+     *
+     * <p>Se agrega en la base y no en memoria porque una noche buena son
+     * centenares de cobros, y traerlos todos para sumarlos en Java es mover
+     * datos que no se van a enseñar.
+     *
+     * <p>Devuelve pares {@code [metodo, total]}. Es lo que permite separar el
+     * efectivo —lo único que llega al cajón y por tanto lo único que explica un
+     * descuadre— del resto.
+     */
+    @Query("""
+            select v.metodoDePago, sum(v.totalCentimos)
+            from VentaDeBarra v
+            where v.arqueo.id = :idArqueo
+            group by v.metodoDePago
+            """)
+    List<Object[]> sumarPorMetodoDePago(@Param("idArqueo") String idArqueo);
+}
