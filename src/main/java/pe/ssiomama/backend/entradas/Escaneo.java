@@ -1,0 +1,75 @@
+package pe.ssiomama.backend.entradas;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.Table;
+import java.time.Instant;
+import pe.ssiomama.backend.auth.Usuario;
+import pe.ssiomama.backend.eventos.Evento;
+
+/**
+ * El momento en que una entrada pasó por la puerta — tabla {@code "CheckIn"}.
+ *
+ * <p>Es una tabla aparte y no un par de columnas en la entrada porque registra
+ * un <b>hecho</b>: quién escaneó, por qué puerta y a qué hora. Eso es lo que
+ * permite responder cuando alguien discute en la entrada, y lo que da el aforo
+ * en vivo.
+ *
+ * <p>{@code ticketId} es único: la base impide dos escaneos de la misma entrada
+ * aunque dos porteros lo intenten a la vez. Esa restricción es la que de verdad
+ * evita que alguien pase dos veces; la comprobación en el código solo sirve para
+ * dar un mensaje entendible.
+ */
+@Entity
+@Table(name = "CheckIn")
+public class Escaneo {
+
+    @Id
+    @Column(name = "id", nullable = false)
+    private String id;
+
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "ticketId", nullable = false, unique = true)
+    private Entrada entrada;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "eventId", nullable = false)
+    private Evento evento;
+
+    /** Qué portero lo escaneó. Se guarda para poder preguntarle. */
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "scannedById", nullable = false)
+    private Usuario escaneadoPor;
+
+    @Column(name = "scannedAt", nullable = false)
+    private Instant escaneadoEn;
+
+    protected Escaneo() {
+        // Hibernate necesita un constructor sin argumentos.
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public Entrada getEntrada() {
+        return entrada;
+    }
+
+    public Evento getEvento() {
+        return evento;
+    }
+
+    public Usuario getEscaneadoPor() {
+        return escaneadoPor;
+    }
+
+    public Instant getEscaneadoEn() {
+        return escaneadoEn;
+    }
+}

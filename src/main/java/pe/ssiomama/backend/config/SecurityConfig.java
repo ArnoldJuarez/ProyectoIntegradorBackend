@@ -153,7 +153,8 @@ public class SecurityConfig {
                                 "/api/inventario/**",
                                 "/api/eventos/**",
                                 "/api/clientes/**",
-                                "/api/caja/**")
+                                "/api/caja/**",
+                                "/api/pedidos/**")
                         .hasAnyAuthority(autoridades(Rol.PANEL))
 
                         .anyRequest().denyAll())
