@@ -157,6 +157,20 @@ public class SecurityConfig {
                                 "/api/pedidos/**")
                         .hasAnyAuthority(autoridades(Rol.PANEL))
 
+
+                        /*
+                         * La puerta es el unico sitio donde entra un rol que no
+                         * es de panel, y va antes del denyAll por eso mismo.
+                         *
+                         * Un portero ve esto y nada mas: ni clientes, ni caja,
+                         * ni almacen. Es la razon de que exista el rol PUERTA en
+                         * vez de dar una cuenta de gerencia a quien esta en la
+                         * entrada, que es lo que se acaba haciendo cuando el
+                         * sistema no lo contempla.
+                         */
+                        .requestMatchers("/api/puerta/**")
+                        .hasAnyAuthority(autoridades(Rol.EN_LA_PUERTA))
+
                         .anyRequest().denyAll())
                 /*
                  * El filtro va antes del de usuario y contraseña de Spring, que

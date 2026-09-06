@@ -90,7 +90,7 @@ public class Entrada {
     /**
      * El escaneo, si ya pasó. Nulo mientras no haya entrado.
      *
-     * <p>Uno a uno: la tabla {@code "CheckIn"} tiene {@code ticketId} único, así
+     * <p>Uno a uno: la tabla {@code "Acceso"} tiene {@code entradaId} único, así
      * que la base impide que una misma entrada se registre dos veces aunque el
      * código lo intentara.
      */
@@ -109,6 +109,18 @@ public class Entrada {
     /** ¿Ya entró alguien con ella? */
     public boolean yaSeUso() {
         return escaneo != null;
+    }
+
+    /**
+     * La marca como usada al pasar por la puerta.
+     *
+     * <p>No comprueba nada: quien decide si puede pasar es el escáner, que
+     * mira el estado, el escaneo previo y la fecha antes de llamar aquí. Si
+     * esta comprobara por su cuenta, habría dos sitios donde cambiar la regla
+     * y uno de los dos se quedaría atrás.
+     */
+    void marcarUsada() {
+        this.estado = EstadoDeEntrada.USADA;
     }
 
     public String getId() {

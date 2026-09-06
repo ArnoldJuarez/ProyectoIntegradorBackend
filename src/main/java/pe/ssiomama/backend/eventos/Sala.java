@@ -6,10 +6,10 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 /**
- * Sala donde se celebra la noche — tabla {@code "Venue"}.
+ * Sala donde se celebra la noche — tabla {@code "Sala"}.
  *
  * <p>De momento solo lo que necesita el listado de eventos. Las medidas del
- * plano ({@code planWidth}, {@code planDepth}) y las zonas llegarán con la
+ * plano ({@code planoAncho}, {@code planoFondo}) y las zonas llegarán con la
  * pantalla del local; mapear columnas que nadie lee solo añade sitios donde
  * equivocarse.
  */
