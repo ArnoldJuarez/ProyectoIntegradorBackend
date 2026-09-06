@@ -243,7 +243,7 @@ class ReservadosTest {
 
     /** Una solicitud de la web nunca nace confirmada: la mesa no queda apartada. */
     @Test
-    @DisplayName("la reserva nace en REQUESTED y sin deposito")
+    @DisplayName("la reserva nace en SOLICITADA y sin deposito")
     void naceSinConfirmar(@Autowired ReservaRepository reservas) throws Exception {
         String email = correoNuevo();
         JsonNode mesa = unaMesaLibre();
@@ -253,7 +253,7 @@ class ReservadosTest {
                 .asText();
 
         Reserva creada = reservas.findById(id).orElseThrow();
-        assertThat(creada.getEstado().name()).isEqualTo("REQUESTED");
+        assertThat(creada.getEstado().name()).isEqualTo("SOLICITADA");
         assertThat(creada.getDepositoCentimos()).isZero();
     }
 }

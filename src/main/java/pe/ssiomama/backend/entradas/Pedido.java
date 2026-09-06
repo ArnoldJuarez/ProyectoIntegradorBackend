@@ -41,7 +41,7 @@ import pe.ssiomama.backend.eventos.Evento;
  * pedido tiene que seguir diciendo lo que se pagó entonces.
  */
 @Entity
-@Table(name = "Order")
+@Table(name = "Pedido")
 public class Pedido {
 
     @Id
@@ -49,47 +49,47 @@ public class Pedido {
     private String id;
 
     /** El que ve el cliente: {@code DSC-000123}. */
-    @Column(name = "code", nullable = false, unique = true)
+    @Column(name = "codigo", nullable = false, unique = true)
     private String codigo;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "customerId", nullable = false)
+    @JoinColumn(name = "clienteId", nullable = false)
     private Cliente cliente;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "eventId", nullable = false)
+    @JoinColumn(name = "eventoId", nullable = false)
     private Evento evento;
 
-    @Column(name = "subtotalCents", nullable = false)
+    @Column(name = "subtotalCentimos", nullable = false)
     private int subtotalCentimos;
 
     /** Gastos de gestión. Van aparte del subtotal para poder enseñarlos. */
-    @Column(name = "feesCents", nullable = false)
+    @Column(name = "comisionCentimos", nullable = false)
     private int comisionCentimos;
 
-    @Column(name = "totalCents", nullable = false)
+    @Column(name = "totalCentimos", nullable = false)
     private int totalCentimos;
 
     /** Recuerda pasarlo como parámetro en las consultas, nunca como literal. */
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(name = "status", nullable = false)
+    @Column(name = "estado", nullable = false)
     private EstadoDePedido estado;
 
     /** Nulo mientras no se haya pagado. */
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(name = "paymentMethod")
+    @Column(name = "metodoPago")
     private MetodoDePago metodoDePago;
 
     /** Referencia de la pasarela. Hoy va vacía: el cobro está simulado. */
-    @Column(name = "paymentRef")
+    @Column(name = "refPago")
     private String referenciaDePago;
 
-    @Column(name = "createdAt", nullable = false)
+    @Column(name = "creadoEn", nullable = false)
     private Instant creadoEn;
 
-    @Column(name = "paidAt")
+    @Column(name = "pagadoEn")
     private Instant pagadoEn;
 
     @OneToMany(mappedBy = "pedido", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
@@ -108,7 +108,7 @@ public class Pedido {
     }
 
     public boolean estaPagado() {
-        return estado == EstadoDePedido.PAID;
+        return estado == EstadoDePedido.PAGADO;
     }
 
     public String getId() {

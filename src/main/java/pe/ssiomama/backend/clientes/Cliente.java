@@ -25,33 +25,33 @@ import java.util.UUID;
  * genera lo mismo, y ese riesgo no compra nada.
  */
 @Entity
-@Table(name = "Customer")
+@Table(name = "Cliente")
 public class Cliente {
 
     @Id
     @Column(name = "id", nullable = false)
     private String id;
 
-    @Column(name = "firstName", nullable = false)
+    @Column(name = "nombre", nullable = false)
     private String nombre;
 
-    @Column(name = "lastName")
+    @Column(name = "apellido")
     private String apellido;
 
-    @Column(name = "email", nullable = false, unique = true)
+    @Column(name = "correo", nullable = false, unique = true)
     private String email;
 
-    @Column(name = "phone")
+    @Column(name = "telefono")
     private String telefono;
 
     /** Columna {@code date}, sin hora: aquí una fecha de nacimiento no tiene instante. */
-    @Column(name = "birthDate")
+    @Column(name = "fechaNacimiento")
     private LocalDate fechaDeNacimiento;
 
-    @Column(name = "district")
+    @Column(name = "distrito")
     private String distrito;
 
-    @Column(name = "marketingConsent", nullable = false)
+    @Column(name = "consienteMarketing", nullable = false)
     private boolean aceptaMarketing;
 
     /**
@@ -60,7 +60,7 @@ public class Cliente {
      * <p>Un consentimiento sin fecha no vale: si mañana alguien pregunta cuándo
      * lo dio, hay que poder responder.
      */
-    @Column(name = "consentAt")
+    @Column(name = "consintioEn")
     private Instant consintioEn;
 
     /*
@@ -68,16 +68,16 @@ public class Cliente {
      * no se recalculan al leer: el panel los enseña en cada listado y hacerlo
      * con count() por cliente sería una consulta por fila.
      */
-    @Column(name = "visitCount", nullable = false)
+    @Column(name = "visitas", nullable = false)
     private int visitas;
 
-    @Column(name = "totalSpentCents", nullable = false)
+    @Column(name = "gastoTotalCentimos", nullable = false)
     private int gastadoCentimos;
 
-    @Column(name = "lastVisitAt")
+    @Column(name = "ultimaVisitaEn")
     private Instant ultimaVisita;
 
-    @Column(name = "createdAt", nullable = false)
+    @Column(name = "creadoEn", nullable = false)
     private Instant creadoEn;
 
     protected Cliente() {

@@ -12,24 +12,24 @@ import jakarta.persistence.Table;
  * {@code PurchaseOrder}, que todavía no está migrado.
  */
 @Entity
-@Table(name = "Supplier")
+@Table(name = "Proveedor")
 public class Proveedor {
 
     @Id
     @Column(name = "id", nullable = false)
     private String id;
 
-    @Column(name = "name", nullable = false)
+    @Column(name = "nombre", nullable = false)
     private String nombre;
 
     /** Nombre de la persona con la que se habla, no el de la empresa. */
-    @Column(name = "contact")
+    @Column(name = "contacto")
     private String personaDeContacto;
 
-    @Column(name = "email")
+    @Column(name = "correo")
     private String email;
 
-    @Column(name = "phone")
+    @Column(name = "telefono")
     private String telefono;
 
     protected Proveedor() {

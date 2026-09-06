@@ -42,7 +42,7 @@ import pe.ssiomama.backend.eventos.TipoDeEntrada;
  * después, si hace falta.
  */
 @Entity
-@Table(name = "Ticket")
+@Table(name = "Entrada")
 public class Entrada {
 
     @Id
@@ -50,15 +50,15 @@ public class Entrada {
     private String id;
 
     /** El identificador legible que ve el cliente. */
-    @Column(name = "code", nullable = false, unique = true)
+    @Column(name = "codigo", nullable = false, unique = true)
     private String codigo;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "orderId", nullable = false)
+    @JoinColumn(name = "pedidoId", nullable = false)
     private Pedido pedido;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "ticketTypeId", nullable = false)
+    @JoinColumn(name = "tipoEntradaId", nullable = false)
     private TipoDeEntrada tipoDeEntrada;
 
     /**
@@ -69,22 +69,22 @@ public class Entrada {
      * sin pasar por el pedido es una tabla menos en cada consulta.
      */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "eventId", nullable = false)
+    @JoinColumn(name = "eventoId", nullable = false)
     private Evento evento;
 
-    @Column(name = "holderName")
+    @Column(name = "nombreTitular")
     private String titular;
 
-    @Column(name = "holderDni")
+    @Column(name = "dniTitular")
     private String dniDelTitular;
 
     /** Recuerda pasarlo como parámetro en las consultas, nunca como literal. */
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(name = "status", nullable = false)
+    @Column(name = "estado", nullable = false)
     private EstadoDeEntrada estado;
 
-    @Column(name = "issuedAt", nullable = false)
+    @Column(name = "emitidaEn", nullable = false)
     private Instant emitidaEn;
 
     /**

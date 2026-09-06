@@ -9,7 +9,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import pe.ssiomama.backend.eventos.Sala;
-import pe.ssiomama.backend.personal.Empleado;
+import pe.ssiomama.backend.auth.Usuario;
 
 /**
  * Una sesión de caja, de que se abre hasta que se cuadra — tabla
@@ -39,7 +39,7 @@ import pe.ssiomama.backend.personal.Empleado;
  * diciendo lo que se contó aquel día.
  */
 @Entity
-@Table(name = "CashSession")
+@Table(name = "SesionCaja")
 public class ArqueoDeCaja {
 
     @Id
@@ -47,24 +47,24 @@ public class ArqueoDeCaja {
     private String id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "venueId", nullable = false)
+    @JoinColumn(name = "salaId", nullable = false)
     private Sala sala;
 
     /** Quién se hace responsable de esta caja. */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "employeeId", nullable = false)
-    private Empleado responsable;
+    @JoinColumn(name = "usuarioId", nullable = false)
+    private Usuario responsable;
 
     /** El fondo inicial, para dar cambio. */
-    @Column(name = "openingCents", nullable = false)
+    @Column(name = "fondoCentimos", nullable = false)
     private int aperturaCentimos;
 
     /** Apertura más lo que suman las ventas registradas. */
-    @Column(name = "expectedCents", nullable = false)
+    @Column(name = "esperadoCentimos", nullable = false)
     private int esperadoCentimos;
 
     /** Lo que se contó al cerrar. Nulo mientras la caja siga abierta. */
-    @Column(name = "countedCents")
+    @Column(name = "contadoCentimos")
     private Integer contadoCentimos;
 
     /**
@@ -72,14 +72,14 @@ public class ArqueoDeCaja {
      *
      * <p>Positivo = sobra dinero. Negativo = falta. Nulo mientras esté abierta.
      */
-    @Column(name = "differenceCents")
+    @Column(name = "descuadreCentimos")
     private Integer diferenciaCentimos;
 
-    @Column(name = "openedAt", nullable = false)
+    @Column(name = "abiertaEn", nullable = false)
     private Instant abiertaEn;
 
     /** Nulo mientras siga abierta. */
-    @Column(name = "closedAt")
+    @Column(name = "cerradaEn")
     private Instant cerradaEn;
 
     protected ArqueoDeCaja() {
@@ -133,7 +133,7 @@ public class ArqueoDeCaja {
         return sala;
     }
 
-    public Empleado getResponsable() {
+    public Usuario getResponsable() {
         return responsable;
     }
 

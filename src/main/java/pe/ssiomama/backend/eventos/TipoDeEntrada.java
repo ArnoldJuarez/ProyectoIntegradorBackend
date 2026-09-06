@@ -14,7 +14,7 @@ import java.time.Instant;
  * {@code "TicketType"}.
  */
 @Entity
-@Table(name = "TicketType")
+@Table(name = "TipoEntrada")
 public class TipoDeEntrada {
 
     @Id
@@ -22,20 +22,20 @@ public class TipoDeEntrada {
     private String id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "eventId", nullable = false)
+    @JoinColumn(name = "eventoId", nullable = false)
     private Evento evento;
 
-    @Column(name = "name", nullable = false)
+    @Column(name = "nombre", nullable = false)
     private String nombre;
 
-    @Column(name = "description")
+    @Column(name = "descripcion")
     private String descripcion;
 
     /** En céntimos enteros, nunca en coma flotante. */
-    @Column(name = "priceCents", nullable = false)
+    @Column(name = "precioCentimos", nullable = false)
     private int precioCentimos;
 
-    @Column(name = "quantity", nullable = false)
+    @Column(name = "cantidad", nullable = false)
     private int cantidad;
 
     /**
@@ -45,22 +45,22 @@ public class TipoDeEntrada {
      * incrementa al crear el pedido, dentro de la misma transacción
      * serializable, para que dos compras simultáneas no vendan el mismo aforo.
      */
-    @Column(name = "sold", nullable = false)
+    @Column(name = "vendidas", nullable = false)
     private int vendidas;
 
-    @Column(name = "salesStart")
+    @Column(name = "ventaDesde")
     private Instant ventaDesde;
 
-    @Column(name = "salesEnd")
+    @Column(name = "ventaHasta")
     private Instant ventaHasta;
 
-    @Column(name = "maxPerOrder", nullable = false)
+    @Column(name = "maxPorPedido", nullable = false)
     private int maximoPorPedido;
 
-    @Column(name = "includesDrink", nullable = false)
+    @Column(name = "incluyeConsumo", nullable = false)
     private int consumicionesIncluidas;
 
-    @Column(name = "active", nullable = false)
+    @Column(name = "activo", nullable = false)
     private boolean activo;
 
     protected TipoDeEntrada() {

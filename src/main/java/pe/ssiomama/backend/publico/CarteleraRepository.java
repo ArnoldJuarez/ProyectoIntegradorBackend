@@ -40,7 +40,7 @@ public interface CarteleraRepository extends JpaRepository<Evento, String> {
      * las dos de la mañana, y desaparecería de la agenda justo cuando más gente
      * la está mirando.
      *
-     * <p>{@code SOLD_OUT} entra: una noche agotada se sigue anunciando, con su
+     * <p>{@code AGOTADO} entra: una noche agotada se sigue anunciando, con su
      * cartel de agotado. Los borradores y las canceladas, no.
      */
     @Query("""
@@ -92,7 +92,7 @@ public interface CarteleraRepository extends JpaRepository<Evento, String> {
      * que viajar como parámetro. Ver la nota en {@code Evento.estado}.
      */
     Set<EstadoDeEvento> ANUNCIABLES =
-            Set.of(EstadoDeEvento.PUBLISHED, EstadoDeEvento.SOLD_OUT);
+            Set.of(EstadoDeEvento.PUBLICADO, EstadoDeEvento.AGOTADO);
 
     default List<Evento> buscarProximas() {
         List<Evento> proximas = buscarProximasConEntradas(ANUNCIABLES);
@@ -104,7 +104,7 @@ public interface CarteleraRepository extends JpaRepository<Evento, String> {
 
     default Optional<Evento> buscarPublicaPorSlug(String slug) {
         Optional<Evento> noche =
-                buscarPublicaPorSlugConEntradas(slug, EstadoDeEvento.DRAFT);
+                buscarPublicaPorSlugConEntradas(slug, EstadoDeEvento.BORRADOR);
         noche.ifPresent(e -> cargarCartelDe(List.of(e)));
         return noche;
     }

@@ -209,11 +209,11 @@ class InventarioControllerTest {
         JsonNode ms = json.readTree(pedir("/api/inventario/movimientos", admin()).getBody());
 
         assertThat(ms).allSatisfy(m -> {
-            if ("SALE".equals(m.get("tipo").asText())) {
+            if ("VENTA".equals(m.get("tipo").asText())) {
                 assertThat(m.get("cantidad").asInt()).isNegative();
                 assertThat(m.get("esEntrada").asBoolean()).isFalse();
             }
-            if ("PURCHASE".equals(m.get("tipo").asText())) {
+            if ("COMPRA".equals(m.get("tipo").asText())) {
                 assertThat(m.get("cantidad").asInt()).isPositive();
             }
         });

@@ -28,7 +28,7 @@ import org.hibernate.type.SqlTypes;
  * coma flotante, sumar cien consumiciones de 3,30 no da 330,00.
  */
 @Entity
-@Table(name = "Product")
+@Table(name = "Producto")
 public class Producto {
 
     @Id
@@ -38,7 +38,7 @@ public class Producto {
     @Column(name = "sku", nullable = false, unique = true)
     private String sku;
 
-    @Column(name = "name", nullable = false)
+    @Column(name = "nombre", nullable = false)
     private String nombre;
 
     /**
@@ -46,7 +46,7 @@ public class Producto {
      * necesita, y traerla siempre serían diez consultas de más al listar.
      */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "categoryId", nullable = false)
+    @JoinColumn(name = "categoriaId", nullable = false)
     private CategoriaDeProducto categoria;
 
     /**
@@ -60,24 +60,72 @@ public class Producto {
      */
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(name = "unit", nullable = false)
+    @Column(name = "unidad", nullable = false)
     private UnidadDeProducto unidad;
 
-    @Column(name = "costCents", nullable = false)
+    @Column(name = "costeCentimos", nullable = false)
     private int costeCentimos;
 
-    @Column(name = "priceCents", nullable = false)
+    @Column(name = "precioCentimos", nullable = false)
     private int precioCentimos;
 
     /** Por debajo de esta cantidad, la pantalla de inventario avisa de reponer. */
-    @Column(name = "stockAlert", nullable = false)
+    @Column(name = "alertaStock", nullable = false)
     private int alertaDeStock;
 
-    @Column(name = "active", nullable = false)
+    @Column(name = "activo", nullable = false)
     private boolean activo;
+
+    /**
+     * Cuántas unidades quedan.
+     *
+     * <p>Antes esto era una tabla aparte, {@code StockItem}, con el saldo por
+     * producto <b>y por sala</b>. Al colapsarse en esta columna, el stock deja
+     * de distinguir salas: hay una sola cifra por producto.
+     *
+     * <p>Es una simplificación razonable mientras solo haya un local. El día que
+     * haya dos, habrá que volver a separarlo — los movimientos sí siguen
+     * guardando de qué sala salieron.
+     *
+     * <p>Es un saldo cacheado, no un {@code sum()} sobre los movimientos: la
+     * pantalla de almacén lo consulta constantemente y recorrer meses de
+     * historial en cada carga no sale a cuenta. El precio es que solo debería
+     * cambiarlo quien registra el movimiento, nunca a mano.
+     */
+    @Column(name = "stock", nullable = false)
+    private int stock;
 
     protected Producto() {
         // Hibernate necesita un constructor sin argumentos.
+    }
+
+    /**
+     * ¿Hay que reponer?
+     *
+     * <p>Compara contra el umbral que lleva cada producto, no contra un número
+     * fijo: no se repone igual una caja de cerveza que una botella de whisky.
+     */
+    public boolean necesitaReposicion() {
+        return stock <= alertaDeStock;
+    }
+
+    /** Cuánto falta para volver al umbral. 0 si no hace falta reponer. */
+    public int faltanParaElUmbral() {
+        return Math.max(alertaDeStock - stock, 0);
+    }
+
+    /**
+     * Lo que vale lo que hay guardado, en céntimos.
+     *
+     * <p>Se valora a coste, no a precio de venta: es lo que se ha pagado por
+     * ello, no lo que se espera cobrar.
+     */
+    public long valorACosteCentimos() {
+        return (long) stock * costeCentimos;
+    }
+
+    public int getStock() {
+        return stock;
     }
 
     public String getId() {

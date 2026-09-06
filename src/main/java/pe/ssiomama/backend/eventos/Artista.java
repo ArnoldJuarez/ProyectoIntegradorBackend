@@ -7,20 +7,20 @@ import jakarta.persistence.Table;
 
 /** DJ o grupo que toca una noche — tabla {@code "Artist"}. */
 @Entity
-@Table(name = "Artist")
+@Table(name = "Artista")
 public class Artista {
 
     @Id
     @Column(name = "id", nullable = false)
     private String id;
 
-    @Column(name = "name", nullable = false)
+    @Column(name = "nombre", nullable = false)
     private String nombre;
 
-    @Column(name = "genre")
+    @Column(name = "genero")
     private String genero;
 
-    @Column(name = "imageUrl")
+    @Column(name = "urlImagen")
     private String imagen;
 
     @Column(name = "instagram")

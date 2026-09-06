@@ -15,7 +15,7 @@ import jakarta.persistence.Table;
  * Hibernate buscaría una tabla {@code productcategory} que no existe.
  */
 @Entity
-@Table(name = "ProductCategory")
+@Table(name = "CategoriaProducto")
 public class CategoriaDeProducto {
 
     /**
@@ -27,7 +27,7 @@ public class CategoriaDeProducto {
     @Column(name = "id", nullable = false)
     private String id;
 
-    @Column(name = "name", nullable = false, unique = true)
+    @Column(name = "nombre", nullable = false, unique = true)
     private String nombre;
 
     protected CategoriaDeProducto() {

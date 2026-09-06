@@ -17,22 +17,22 @@ import jakarta.persistence.Table;
  * está aparcada. {@code validate} solo exige que las columnas mapeadas existan.
  */
 @Entity
-@Table(name = "Zone")
+@Table(name = "Zona")
 public class Zona {
 
     @Id
     @Column(name = "id", nullable = false)
     private String id;
 
-    @Column(name = "name", nullable = false)
+    @Column(name = "nombre", nullable = false)
     private String nombre;
 
     /** Aforo de la zona. 0 = no se controla por separado. */
-    @Column(name = "capacity", nullable = false)
+    @Column(name = "aforo", nullable = false)
     private int aforo;
 
     /** Orden en que se pinta en el plano y en los listados. */
-    @Column(name = "sortOrder", nullable = false)
+    @Column(name = "orden", nullable = false)
     private int orden;
 
     protected Zona() {

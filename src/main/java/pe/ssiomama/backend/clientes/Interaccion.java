@@ -27,7 +27,7 @@ import org.hibernate.type.SqlTypes;
  * no rompe nada y evita arrastrar el manejo de JSON antes de necesitarlo.
  */
 @Entity
-@Table(name = "Interaction")
+@Table(name = "Interaccion")
 public class Interaccion {
 
     @Id
@@ -35,24 +35,24 @@ public class Interaccion {
     private String id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "customerId", nullable = false)
+    @JoinColumn(name = "clienteId", nullable = false)
     private Cliente cliente;
 
     /** Recuerda pasar el valor como parámetro en las consultas, nunca como literal. */
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(name = "type", nullable = false)
+    @Column(name = "tipo", nullable = false)
     private TipoDeInteraccion tipo;
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(name = "channel")
+    @Column(name = "canal")
     private CanalDeInteraccion canal;
 
-    @Column(name = "summary", nullable = false)
+    @Column(name = "resumen", nullable = false)
     private String resumen;
 
-    @Column(name = "occurredAt", nullable = false)
+    @Column(name = "ocurrioEn", nullable = false)
     private Instant ocurrioEn;
 
     protected Interaccion() {

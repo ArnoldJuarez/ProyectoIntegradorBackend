@@ -25,7 +25,7 @@ import pe.ssiomama.backend.eventos.Evento;
  * instante, y dos personas pidiendo a la vez pasan las dos la comprobación.
  */
 @Entity
-@Table(name = "TableReservation")
+@Table(name = "ReservaBox")
 public class Reserva {
 
     @Id
@@ -33,36 +33,36 @@ public class Reserva {
     private String id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "eventId", nullable = false)
+    @JoinColumn(name = "eventoId", nullable = false)
     private Evento evento;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "tableId", nullable = false)
+    @JoinColumn(name = "boxId", nullable = false)
     private MesaVip mesa;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "customerId", nullable = false)
+    @JoinColumn(name = "clienteId", nullable = false)
     private Cliente cliente;
 
-    @Column(name = "guests", nullable = false)
+    @Column(name = "personas", nullable = false)
     private int personas;
 
     /**
      * Depósito, en céntimos. Nace en 0: se acuerda por teléfono al confirmar, no
      * lo fija la web.
      */
-    @Column(name = "depositCents", nullable = false)
+    @Column(name = "depositoCentimos", nullable = false)
     private int depositoCentimos;
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(name = "status", nullable = false)
+    @Column(name = "estado", nullable = false)
     private EstadoDeReserva estado;
 
-    @Column(name = "notes")
+    @Column(name = "notas")
     private String notas;
 
-    @Column(name = "createdAt", nullable = false)
+    @Column(name = "creadoEn", nullable = false)
     private Instant creadaEn;
 
     protected Reserva() {
@@ -79,7 +79,7 @@ public class Reserva {
         r.cliente = cliente;
         r.personas = personas;
         r.depositoCentimos = 0;
-        r.estado = EstadoDeReserva.REQUESTED;
+        r.estado = EstadoDeReserva.SOLICITADA;
         r.notas = notas == null || notas.isBlank() ? null : notas;
         r.creadaEn = Instant.now();
         return r;

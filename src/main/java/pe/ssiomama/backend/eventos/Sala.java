@@ -14,17 +14,17 @@ import jakarta.persistence.Table;
  * equivocarse.
  */
 @Entity
-@Table(name = "Venue")
+@Table(name = "Sala")
 public class Sala {
 
     @Id
     @Column(name = "id", nullable = false)
     private String id;
 
-    @Column(name = "name", nullable = false)
+    @Column(name = "nombre", nullable = false)
     private String nombre;
 
-    @Column(name = "capacity", nullable = false)
+    @Column(name = "aforo", nullable = false)
     private int aforo;
 
     protected Sala() {

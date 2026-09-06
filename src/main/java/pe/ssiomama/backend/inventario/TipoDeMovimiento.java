@@ -22,28 +22,28 @@ package pe.ssiomama.backend.inventario;
 public enum TipoDeMovimiento {
 
     /** Llegó mercancía del proveedor. */
-    PURCHASE,
+    COMPRA,
 
     /** Se vendió en barra. */
-    SALE,
+    VENTA,
 
     /** Rotura, derrame o caducidad. */
-    WASTE,
+    MERMA,
 
     /** Corrección tras un recuento. Puede ir en los dos sentidos. */
-    ADJUSTMENT,
+    AJUSTE,
 
     /** Paso de una sala a otra. */
-    TRANSFER;
+    TRANSFERENCIA;
 
     /** Cómo se llama en pantalla. */
     public String etiqueta() {
         return switch (this) {
-            case PURCHASE -> "Compra";
-            case SALE -> "Venta";
-            case WASTE -> "Merma";
-            case ADJUSTMENT -> "Ajuste";
-            case TRANSFER -> "Traspaso";
+            case COMPRA -> "Compra";
+            case VENTA -> "Venta";
+            case MERMA -> "Merma";
+            case AJUSTE -> "Ajuste";
+            case TRANSFERENCIA -> "Traspaso";
         };
     }
 }

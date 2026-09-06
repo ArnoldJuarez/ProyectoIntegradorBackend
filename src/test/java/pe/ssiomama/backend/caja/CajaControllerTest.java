@@ -208,7 +208,7 @@ class CajaControllerTest {
         for (JsonNode t : ficha.get("porMetodoDePago")) {
             delDesglose += t.get("totalCentimos").asLong();
             // El efectivo es el único que llega al cajón.
-            assertThat(t.get("esEfectivo").asBoolean()).isEqualTo("CASH".equals(t.get("metodo").asText()));
+            assertThat(t.get("esEfectivo").asBoolean()).isEqualTo("EFECTIVO".equals(t.get("metodo").asText()));
         }
 
         assertThat(ficha.get("efectivoCentimos").asLong() + ficha.get("otrosMediosCentimos").asLong())

@@ -14,8 +14,17 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <p>Va aparte de {@link ProductoController} porque responde otra pregunta. Ese
  * sirve el <b>catálogo</b> —qué productos existen y a qué precio se venden— y
- * este sirve las <b>existencias</b> —cuántos quedan de cada uno—. Son cosas
- * distintas: un producto puede existir en el catálogo con cero unidades.
+ * este sirve las <b>existencias</b> —cuántos quedan de cada uno—.
+ *
+ * <h2>El stock dejó de ser por sala</h2>
+ *
+ * <p>En el esquema anterior el saldo vivía en una tabla aparte,
+ * {@code StockItem}, con una fila por producto <b>y sala</b>. Ahora es una sola
+ * columna en {@code Producto}, así que hay una única cifra por producto.
+ *
+ * <p>Los movimientos sí siguen guardando de qué sala salieron, de modo que la
+ * información no se perdió: lo que se perdió es el saldo desglosado. Mientras
+ * haya un solo local da igual; con dos habría que volver a separarlo.
  */
 @RestController
 @RequestMapping("/api/inventario")
@@ -30,53 +39,46 @@ public class InventarioController {
      */
     private static final int MOVIMIENTOS_MAXIMO = 200;
 
-    private final ExistenciaRepository existencias;
+    private final ProductoRepository productos;
     private final MovimientoRepository movimientos;
     private final ProveedorRepository proveedores;
 
     public InventarioController(
-            ExistenciaRepository existencias,
+            ProductoRepository productos,
             MovimientoRepository movimientos,
             ProveedorRepository proveedores) {
-        this.existencias = existencias;
+        this.productos = productos;
         this.movimientos = movimientos;
         this.proveedores = proveedores;
     }
 
     // ── Lo que sale por la API ────────────────────────────────────
 
-    /** Una línea de stock: un producto en una sala. */
+    /** Una línea de stock: cuántas unidades quedan de un producto. */
     public record LineaDeStock(
-            String id,
             String productoId,
             String sku,
             String producto,
             String categoria,
-            String sala,
             UnidadDeProducto unidad,
             int cantidad,
             int alertaDeStock,
             boolean necesitaReposicion,
             int faltanParaElUmbral,
-            long valorACosteCentimos,
-            Instant actualizadoEn) {
+            long valorACosteCentimos) {
 
-        static LineaDeStock de(Existencia e) {
-            Producto p = e.getProducto();
+        static LineaDeStock de(Producto p) {
             return new LineaDeStock(
-                    e.getId(),
                     p.getId(),
                     p.getSku(),
                     p.getNombre(),
                     p.getCategoria().getNombre(),
-                    e.getSala().getNombre(),
                     p.getUnidad(),
-                    e.getCantidad(),
+                    p.getStock(),
                     p.getAlertaDeStock(),
-                    e.necesitaReposicion(),
-                    e.faltanParaElUmbral(),
-                    e.valorACosteCentimos(),
-                    e.getActualizadoEn());
+                    p.necesitaReposicion(),
+                    p.faltanParaElUmbral(),
+                    p.valorACosteCentimos());
         }
     }
 
@@ -143,21 +145,19 @@ public class InventarioController {
 
     // ── Endpoints ─────────────────────────────────────────────────
 
-    /**
-     * El stock con su resumen. Lo que hay que reponer sale primero.
-     */
+    /** El stock con su resumen. Lo que hay que reponer sale primero. */
     @GetMapping("/stock")
     @Transactional(readOnly = true)
     public StockConResumen stock() {
-        List<Existencia> todas = existencias.buscarTodasConDetalle();
+        List<Producto> todos = productos.buscarConStock();
 
         ResumenDeAlmacen resumen = new ResumenDeAlmacen(
-                todas.size(),
-                (int) todas.stream().filter(Existencia::necesitaReposicion).count(),
-                (int) todas.stream().filter(e -> e.getCantidad() == 0).count(),
-                todas.stream().mapToLong(Existencia::valorACosteCentimos).sum());
+                todos.size(),
+                (int) todos.stream().filter(Producto::necesitaReposicion).count(),
+                (int) todos.stream().filter(p -> p.getStock() == 0).count(),
+                todos.stream().mapToLong(Producto::valorACosteCentimos).sum());
 
-        return new StockConResumen(resumen, todas.stream().map(LineaDeStock::de).toList());
+        return new StockConResumen(resumen, todos.stream().map(LineaDeStock::de).toList());
     }
 
     /**

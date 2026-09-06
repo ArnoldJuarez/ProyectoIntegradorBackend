@@ -11,11 +11,13 @@ spring:
     active: ${SPRING_PROFILES_ACTIVE:local}
 
   datasource:
-    # La misma base `discoteca` que dejo el proyecto anterior: los datos reales
-    # ya estan ahi (eventos, clientes, ventas, arqueos) y no tiene sentido
-    # empezar con una vacia. Lo que cambia es quien manda en el esquema: a
-    # partir de aqui, Flyway.
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:discoteca}
+    # Base `teca`: el esquema con los nombres en espanol, con los mismos datos
+    # reales dentro (36 clientes, 139 entradas, 70 pedidos).
+    #
+    # La base anterior `discoteca` sigue existiendo, en ingles y sin tocar. Para
+    # volver a ella basta con poner DB_NAME=discoteca, aunque las entidades ya
+    # no cuadran con sus nombres.
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:teca}
     username: ${DB_USER:postgres}
     # Sin valor por defecto a proposito: si falta, falla al arrancar y lo dice.
     # Ponla en la variable de entorno DB_PASSWORD o en application-local.yml.

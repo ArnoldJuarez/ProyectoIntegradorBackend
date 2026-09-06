@@ -84,7 +84,7 @@ public class BoletinController {
 
         interacciones.save(Interaccion.registrar(
                 cliente,
-                TipoDeInteraccion.NOTE,
+                TipoDeInteraccion.NOTA,
                 CanalDeInteraccion.WEB,
                 "Pidió aviso cuando salga el próximo cartel."));
 

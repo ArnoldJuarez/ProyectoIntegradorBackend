@@ -26,7 +26,7 @@ import pe.ssiomama.backend.eventos.Evento;
  * dar un mensaje entendible.
  */
 @Entity
-@Table(name = "CheckIn")
+@Table(name = "Acceso")
 public class Escaneo {
 
     @Id
@@ -34,19 +34,19 @@ public class Escaneo {
     private String id;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "ticketId", nullable = false, unique = true)
+    @JoinColumn(name = "entradaId", nullable = false, unique = true)
     private Entrada entrada;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "eventId", nullable = false)
+    @JoinColumn(name = "eventoId", nullable = false)
     private Evento evento;
 
     /** Qué portero lo escaneó. Se guarda para poder preguntarle. */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "scannedById", nullable = false)
+    @JoinColumn(name = "escaneadoPorId", nullable = false)
     private Usuario escaneadoPor;
 
-    @Column(name = "scannedAt", nullable = false)
+    @Column(name = "escaneadoEn", nullable = false)
     private Instant escaneadoEn;
 
     protected Escaneo() {

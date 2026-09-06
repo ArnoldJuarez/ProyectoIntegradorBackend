@@ -5,35 +5,35 @@ package pe.ssiomama.backend.entradas;
  * de PostgreSQL.
  *
  * <p>Es lo que consulta el escáner de la puerta, así que solo hay una pregunta
- * que importa: {@link #VALID} pasa, el resto no. Y la diferencia entre los tres
+ * que importa: {@link #VALIDA} pasa, el resto no. Y la diferencia entre los tres
  * que no pasan no es cosmética: al portero hay que decirle <b>por qué</b>, o
  * discutirá con quien tiene delante sin argumentos.
  */
 public enum EstadoDeEntrada {
 
     /** Emitida y sin usar. Es la única que deja pasar. */
-    VALID,
+    VALIDA,
 
     /** Ya se escaneó. Un segundo intento es un intento de colarse o un error. */
-    USED,
+    USADA,
 
     /** Anulada por la casa. */
-    VOID,
+    ANULADA,
 
     /** Devuelta al cliente. */
-    REFUNDED;
+    DEVUELTO;
 
     public String etiqueta() {
         return switch (this) {
-            case VALID -> "Válida";
-            case USED -> "Usada";
-            case VOID -> "Anulada";
-            case REFUNDED -> "Devuelta";
+            case VALIDA -> "Válida";
+            case USADA -> "Usada";
+            case ANULADA -> "Anulada";
+            case DEVUELTO -> "Devuelta";
         };
     }
 
     /** ¿Deja pasar por la puerta? */
     public boolean dejaPasar() {
-        return this == VALID;
+        return this == VALIDA;
     }
 }

@@ -58,7 +58,7 @@ class AuthControllerTest {
                         .content(credenciales(ADMIN, CLAVE)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value(ADMIN))
-                .andExpect(jsonPath("$.rol").value("ADMIN"))
+                .andExpect(jsonPath("$.rol").value("DIRECCION"))
                 .andExpect(jsonPath("$.nombre").isNotEmpty())
                 // El hash NUNCA sale en la respuesta.
                 .andExpect(jsonPath("$.hashDeContrasena").doesNotExist())

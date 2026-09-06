@@ -10,7 +10,7 @@ import jakarta.persistence.Table;
 
 /** Un reservado del local — tabla {@code "VipTable"}. */
 @Entity
-@Table(name = "VipTable")
+@Table(name = "Box")
 public class MesaVip {
 
     @Id
@@ -22,14 +22,14 @@ public class MesaVip {
      * ninguna zona con nombre.
      */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "zoneId")
+    @JoinColumn(name = "zonaId")
     private Zona zona;
 
-    @Column(name = "name", nullable = false)
+    @Column(name = "nombre", nullable = false)
     private String nombre;
 
     /** Cuánta gente cabe. Es el tope de una solicitud. */
-    @Column(name = "seats", nullable = false)
+    @Column(name = "plazas", nullable = false)
     private int plazas;
 
     /**
@@ -38,10 +38,10 @@ public class MesaVip {
      * <p>Sale a la web: es lo primero que pregunta quien va a reservar, y no
      * decirlo hasta la llamada es la forma más rápida de que cuelguen.
      */
-    @Column(name = "minSpendCents", nullable = false)
+    @Column(name = "consumoMinimoCentimos", nullable = false)
     private int consumoMinimoCentimos;
 
-    @Column(name = "active", nullable = false)
+    @Column(name = "activo", nullable = false)
     private boolean activa;
 
     protected MesaVip() {

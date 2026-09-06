@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
  * Mapeo de eventos contra la base real, con las fechas bajo vigilancia.
@@ -22,6 +23,10 @@ class EventoRepositoryTest {
 
     @Autowired
     private EventoRepository eventos;
+
+    /** Para leer la columna en crudo, sin que Hibernate la interprete. */
+    @Autowired
+    private JdbcTemplate jdbc;
 
     @Test
     @DisplayName("carga las noches con su sala y sus tipos de entrada")
@@ -42,30 +47,61 @@ class EventoRepositoryTest {
     /**
      * <b>El test que importa de este archivo.</b>
      *
-     * <p>«Viernes Urbano» abre puertas a las 23:30 del viernes 11 de septiembre,
-     * hora de Lima. En la base eso está guardado como {@code 2026-09-12
-     * 04:30:00} en una columna <b>sin zona horaria</b>, porque el instante va en
-     * UTC.
+     * <p>Las fechas se guardan en columnas {@code timestamp without time zone},
+     * es decir texto sin zona, y el acuerdo es que ese texto está en UTC. Quien
+     * lo lee tiene que interpretarlo igual, o las horas se corren sin que salte
+     * ningún error.
      *
      * <p>Si {@code hibernate.jdbc.time_zone} no estuviera en UTC, Hibernate
-     * leería ese texto en la zona del sistema operativo y en una máquina en Lima
-     * devolvería las 09:30Z: cinco horas de más, sin ningún error de por medio,
-     * y con todas las horas de la web corridas.
+     * leería «2026-09-19 01:00:00» en la zona del sistema operativo y en una
+     * máquina en Lima devolvería las 06:00Z: cinco horas de más, en silencio, y
+     * con todas las horas de la web corridas.
+     *
+     * <p>Por eso el test no compara contra una fecha escrita a mano —que se
+     * rompería al volver a sembrar la base— sino contra <b>lo que pone la
+     * columna</b>, leído con JDBC en crudo. Compara las dos lecturas de la misma
+     * fila: si coinciden, no hubo desplazamiento.
      */
     @Test
     @DisplayName("las puertas se leen en el instante exacto, sin correrse de zona")
     void lasFechasNoSeCorren() {
-        var noche = eventos.buscarPorSlugConDetalle("viernes-urbano").orElseThrow();
+        var todas = eventos.buscarTodosConDetalle();
+        assertThat(todas).as("la base tiene eventos que comprobar").isNotEmpty();
 
-        assertThat(noche.getPuertasA())
-                .as("el instante UTC tal y como está en la columna")
-                .isEqualTo(Instant.parse("2026-09-12T04:30:00Z"));
+        for (var noche : todas) {
+            // La columna en crudo, forzada a formato ISO y marcada como UTC,
+            // que es la zona en la que se acordó guardarla.
+            String textoCrudo = jdbc.queryForObject(
+                    """
+                    select to_char("aperturaPuertas", 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+                    from "Evento" where slug = ?
+                    """,
+                    String.class,
+                    noche.getSlug());
+            Instant enLaColumna = Instant.parse(textoCrudo);
 
-        // Y visto desde la sala, que es como lo lee una persona:
+            assertThat(noche.getPuertasA())
+                    .as("«%s»: el instante UTC tal y como está en la columna", noche.getSlug())
+                    .isEqualTo(enLaColumna);
+        }
+    }
+
+    /**
+     * Lo anterior visto desde la sala: Lima va cinco horas por detrás de UTC y
+     * no tiene horario de verano, así que el desfase es siempre el mismo.
+     *
+     * <p>Es la comprobación que traduce el instante a lo que lee una persona en
+     * el cartel de la puerta.
+     */
+    @Test
+    @DisplayName("en Lima la misma noche se ve cinco horas antes")
+    void enLimaSonCincoHorasMenos() {
+        var noche = eventos.buscarTodosConDetalle().get(0);
+
         ZonedDateTime enLima = noche.getPuertasA().atZone(LIMA);
-        assertThat(enLima.getHour()).isEqualTo(23);
-        assertThat(enLima.getMinute()).isEqualTo(30);
-        assertThat(enLima.getDayOfMonth()).isEqualTo(11);
+
+        assertThat(enLima.getOffset().getTotalSeconds()).isEqualTo(-5 * 3600);
+        assertThat(enLima.toInstant()).isEqualTo(noche.getPuertasA());
     }
 
     @Test

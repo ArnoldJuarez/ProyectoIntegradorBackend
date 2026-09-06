@@ -9,8 +9,8 @@ package pe.ssiomama.backend.clientes;
 public enum CanalDeInteraccion {
     WEB,
     WHATSAPP,
-    EMAIL,
-    PHONE,
+    CORREO,
+    TELEFONO,
     INSTAGRAM,
-    IN_PERSON
+    EN_PERSONA
 }

@@ -9,12 +9,12 @@ package pe.ssiomama.backend.reservados;
  */
 public enum EstadoDeReserva {
     /** Pedida por la web. Todavía no vale para entrar. */
-    REQUESTED,
+    SOLICITADA,
     /** Confirmada por teléfono, con su depósito acordado. */
-    CONFIRMED,
+    CONFIRMADA,
     /** Se sentaron. */
-    SEATED,
+    SENTADA,
     /** Confirmada y no vinieron. */
-    NO_SHOW,
-    CANCELLED
+    NO_VINO,
+    CANCELADO
 }

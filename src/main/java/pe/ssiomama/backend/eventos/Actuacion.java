@@ -18,7 +18,7 @@ import java.time.Instant;
  * ni de la noche por separado. Por eso es una entidad y no un {@code @ManyToMany}.
  */
 @Entity
-@Table(name = "EventArtist")
+@Table(name = "EventoArtista")
 public class Actuacion {
 
     @EmbeddedId
@@ -31,22 +31,22 @@ public class Actuacion {
      */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @MapsId("eventoId")
-    @JoinColumn(name = "eventId", nullable = false)
+    @JoinColumn(name = "eventoId", nullable = false)
     private Evento evento;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @MapsId("artistaId")
-    @JoinColumn(name = "artistId", nullable = false)
+    @JoinColumn(name = "artistaId", nullable = false)
     private Artista artista;
 
-    @Column(name = "setStart")
+    @Column(name = "inicioSet")
     private Instant empiezaA;
 
-    @Column(name = "setEnd")
+    @Column(name = "finSet")
     private Instant terminaA;
 
     /** El nombre grande del cartel. Puede haber más de uno. */
-    @Column(name = "headliner", nullable = false)
+    @Column(name = "cabezaCartel", nullable = false)
     private boolean cabezaDeCartel;
 
     protected Actuacion() {

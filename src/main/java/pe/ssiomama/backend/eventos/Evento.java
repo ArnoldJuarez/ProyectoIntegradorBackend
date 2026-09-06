@@ -37,7 +37,7 @@ import org.hibernate.type.SqlTypes;
  * guarda.
  */
 @Entity
-@Table(name = "Event")
+@Table(name = "Evento")
 public class Evento {
 
     @Id
@@ -48,32 +48,32 @@ public class Evento {
     @Column(name = "slug", nullable = false, unique = true)
     private String slug;
 
-    @Column(name = "title", nullable = false)
+    @Column(name = "titulo", nullable = false)
     private String titulo;
 
-    @Column(name = "description")
+    @Column(name = "descripcion")
     private String descripcion;
 
-    @Column(name = "coverImage")
+    @Column(name = "imagenPortada")
     private String portada;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "venueId", nullable = false)
+    @JoinColumn(name = "salaId", nullable = false)
     private Sala sala;
 
-    @Column(name = "doorsAt", nullable = false)
+    @Column(name = "aperturaPuertas", nullable = false)
     private Instant puertasA;
 
-    @Column(name = "startsAt", nullable = false)
+    @Column(name = "empiezaEn", nullable = false)
     private Instant empiezaA;
 
-    @Column(name = "endsAt", nullable = false)
+    @Column(name = "terminaEn", nullable = false)
     private Instant terminaA;
 
-    @Column(name = "minAge", nullable = false)
+    @Column(name = "edadMinima", nullable = false)
     private int edadMinima;
 
-    @Column(name = "dressCode")
+    @Column(name = "vestimenta")
     private String vestimenta;
 
     /**
@@ -93,13 +93,13 @@ public class Evento {
      */
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(name = "status", nullable = false)
+    @Column(name = "estado", nullable = false)
     private EstadoDeEvento estado;
 
-    @Column(name = "publishedAt")
+    @Column(name = "publicadoEn")
     private Instant publicadoEn;
 
-    @Column(name = "createdAt", nullable = false)
+    @Column(name = "creadoEn", nullable = false)
     private Instant creadoEn;
 
     /**

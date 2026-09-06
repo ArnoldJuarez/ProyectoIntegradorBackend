@@ -19,10 +19,10 @@ import java.util.Objects;
 @Embeddable
 public class ActuacionId implements Serializable {
 
-    @Column(name = "eventId", nullable = false)
+    @Column(name = "eventoId", nullable = false)
     private String eventoId;
 
-    @Column(name = "artistId", nullable = false)
+    @Column(name = "artistaId", nullable = false)
     private String artistaId;
 
     protected ActuacionId() {

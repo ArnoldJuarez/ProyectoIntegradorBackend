@@ -18,7 +18,7 @@ import pe.ssiomama.backend.inventario.Producto;
  * subido después.
  */
 @Entity
-@Table(name = "BarSaleItem")
+@Table(name = "LineaVentaBarra")
 public class LineaDeVenta {
 
     @Id
@@ -26,18 +26,18 @@ public class LineaDeVenta {
     private String id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "barSaleId", nullable = false)
+    @JoinColumn(name = "ventaBarraId", nullable = false)
     private VentaDeBarra venta;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "productId", nullable = false)
+    @JoinColumn(name = "productoId", nullable = false)
     private Producto producto;
 
-    @Column(name = "quantity", nullable = false)
+    @Column(name = "cantidad", nullable = false)
     private int cantidad;
 
     /** El precio de aquel momento, en céntimos. */
-    @Column(name = "unitPriceCents", nullable = false)
+    @Column(name = "precioUnitarioCentimos", nullable = false)
     private int precioUnitarioCentimos;
 
     protected LineaDeVenta() {

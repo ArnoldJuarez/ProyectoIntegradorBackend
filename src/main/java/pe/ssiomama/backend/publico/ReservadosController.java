@@ -115,7 +115,7 @@ public class ReservadosController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         Set<String> pedidas =
-                Set.copyOf(reservas.idsDeMesasPedidas(slug, EstadoDeReserva.CANCELLED));
+                Set.copyOf(reservas.idsDeMesasPedidas(slug, EstadoDeReserva.CANCELADO));
 
         return mesas.buscarDisponibles().stream()
                 .map(m -> new MesaDisponible(
@@ -135,7 +135,7 @@ public class ReservadosController {
                 .buscarPublicaPorSlug(solicitud.slug())
                 .orElseThrow(() -> noSePuede("Esa fecha no admite reservas."));
 
-        if (noche.getEstado() != EstadoDeEvento.PUBLISHED
+        if (noche.getEstado() != EstadoDeEvento.PUBLICADO
                 || noche.getEmpiezaA().isBefore(Instant.now())) {
             throw noSePuede("Esa fecha no admite reservas.");
         }
@@ -191,7 +191,7 @@ public class ReservadosController {
 
         interacciones.save(Interaccion.registrar(
                 cliente,
-                TipoDeInteraccion.RESERVATION,
+                TipoDeInteraccion.RESERVA,
                 CanalDeInteraccion.WEB,
                 "Solicitó %s para %d personas en \"%s\"."
                         .formatted(mesa.getNombre(), solicitud.personas(), noche.getTitulo())));

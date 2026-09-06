@@ -66,12 +66,12 @@ class CarteleraTest {
     @DisplayName("NO publica los borradores")
     void noPublicaBorradores() {
         String agenda = http.getForObject("/api/publico/agenda", String.class);
-        assertThat(agenda).doesNotContain("DRAFT");
+        assertThat(agenda).doesNotContain("BORRADOR");
 
         // Y por si acaso, contra la base: ninguno de los slugs en borrador
         // aparece en la respuesta.
         List<String> borradores = eventos.findAll().stream()
-                .filter(e -> e.getEstado() == EstadoDeEvento.DRAFT)
+                .filter(e -> e.getEstado() == EstadoDeEvento.BORRADOR)
                 .map(Evento::getSlug)
                 .toList();
         assertThat(borradores).allSatisfy(slug -> assertThat(agenda).doesNotContain(slug));
@@ -81,7 +81,7 @@ class CarteleraTest {
     @DisplayName("una noche en borrador responde 404, igual que una inexistente")
     void borradorDa404() {
         var borrador = eventos.findAll().stream()
-                .filter(e -> e.getEstado() == EstadoDeEvento.DRAFT)
+                .filter(e -> e.getEstado() == EstadoDeEvento.BORRADOR)
                 .findFirst();
 
         // Solo tiene sentido si el seed dejó alguno.

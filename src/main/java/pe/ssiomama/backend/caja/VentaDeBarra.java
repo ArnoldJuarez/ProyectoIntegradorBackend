@@ -29,7 +29,7 @@ import pe.ssiomama.backend.eventos.Evento;
  * prueba, un privado— y la venta sigue siendo válida.
  */
 @Entity
-@Table(name = "BarSale")
+@Table(name = "VentaBarra")
 public class VentaDeBarra {
 
     @Id
@@ -37,11 +37,11 @@ public class VentaDeBarra {
     private String id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "cashSessionId", nullable = false)
+    @JoinColumn(name = "sesionCajaId", nullable = false)
     private ArqueoDeCaja arqueo;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "eventId")
+    @JoinColumn(name = "eventoId")
     private Evento evento;
 
     /**
@@ -51,16 +51,16 @@ public class VentaDeBarra {
      * que se cobró de verdad: si mañana cambia el precio de un producto, esta
      * venta tiene que seguir diciendo lo que pagó aquel cliente.
      */
-    @Column(name = "totalCents", nullable = false)
+    @Column(name = "totalCentimos", nullable = false)
     private int totalCentimos;
 
     /** Recuerda pasarlo como parámetro en las consultas, nunca como literal. */
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(name = "paymentMethod", nullable = false)
+    @Column(name = "metodoPago", nullable = false)
     private MetodoDePago metodoDePago;
 
-    @Column(name = "createdAt", nullable = false)
+    @Column(name = "creadoEn", nullable = false)
     private Instant creadaEn;
 
     @OneToMany(mappedBy = "venta", fetch = FetchType.LAZY, cascade = CascadeType.ALL)

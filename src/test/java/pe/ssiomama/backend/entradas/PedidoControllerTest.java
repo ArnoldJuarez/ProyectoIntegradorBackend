@@ -136,7 +136,7 @@ class PedidoControllerTest {
 
         boolean seComproboAlguno = false;
         for (JsonNode p : ps) {
-            if (!"PAID".equals(p.get("estado").asText())) {
+            if (!"PAGADO".equals(p.get("estado").asText())) {
                 continue;
             }
             JsonNode f = json.readTree(
@@ -163,7 +163,7 @@ class PedidoControllerTest {
                     pedir("/api/pedidos/" + p.get("codigo").asText(), sesion).getBody());
 
             for (JsonNode e : f.get("entradas")) {
-                boolean usada = "USED".equals(e.get("estado").asText());
+                boolean usada = "USADA".equals(e.get("estado").asText());
                 boolean escaneada = e.get("yaSeUso").asBoolean();
                 assertThat(escaneada)
                         .as("entrada %s: estado y escaneo no coinciden", e.get("referencia").asText())

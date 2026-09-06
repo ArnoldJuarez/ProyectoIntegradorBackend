@@ -6,31 +6,34 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 /**
- * Catálogo de puestos del personal — tabla {@code "StaffPosition"}.
+ * Catálogo de puestos del personal — tabla {@code "Puesto"}.
  *
  * <p>Antes el puesto se escribía a mano en dos sitios distintos y nada
  * garantizaba que «Barra principal» se escribiera igual las dos veces. Como
  * tabla propia, el nombre es único y los turnos apuntan al mismo sitio.
+ *
+ * <p>Quien ocupa cada puesto está en {@code Usuario.puestoId}: la antigua tabla
+ * {@code Employee} se fusionó ahí.
  */
 @Entity
-@Table(name = "StaffPosition")
-public class PuestoDeTrabajo {
+@Table(name = "Puesto")
+public class Puesto {
 
     @Id
     @Column(name = "id", nullable = false)
     private String id;
 
-    @Column(name = "name", nullable = false, unique = true)
+    @Column(name = "nombre", nullable = false, unique = true)
     private String nombre;
 
     /** Puestos que atienden la barra. De ellos salen los turnos de venta. */
-    @Column(name = "isBar", nullable = false)
+    @Column(name = "esBarra", nullable = false)
     private boolean esDeBarra;
 
-    @Column(name = "active", nullable = false)
+    @Column(name = "activo", nullable = false)
     private boolean activo;
 
-    protected PuestoDeTrabajo() {
+    protected Puesto() {
         // Hibernate necesita un constructor sin argumentos.
     }
 

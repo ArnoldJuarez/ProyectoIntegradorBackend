@@ -17,7 +17,7 @@ import pe.ssiomama.backend.eventos.TipoDeEntrada;
  * Early Bird haya subido después.
  */
 @Entity
-@Table(name = "OrderItem")
+@Table(name = "LineaPedido")
 public class LineaDePedido {
 
     @Id
@@ -25,18 +25,18 @@ public class LineaDePedido {
     private String id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "orderId", nullable = false)
+    @JoinColumn(name = "pedidoId", nullable = false)
     private Pedido pedido;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "ticketTypeId", nullable = false)
+    @JoinColumn(name = "tipoEntradaId", nullable = false)
     private TipoDeEntrada tipoDeEntrada;
 
-    @Column(name = "quantity", nullable = false)
+    @Column(name = "cantidad", nullable = false)
     private int cantidad;
 
     /** El precio al que se compró, en céntimos. */
-    @Column(name = "unitPriceCents", nullable = false)
+    @Column(name = "precioUnitarioCentimos", nullable = false)
     private int precioUnitarioCentimos;
 
     protected LineaDePedido() {
