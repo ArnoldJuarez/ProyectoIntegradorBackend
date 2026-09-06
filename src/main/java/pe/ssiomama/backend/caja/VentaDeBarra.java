@@ -14,6 +14,7 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import pe.ssiomama.backend.eventos.Evento;
@@ -68,6 +69,36 @@ public class VentaDeBarra {
 
     protected VentaDeBarra() {
         // Hibernate necesita un constructor sin argumentos.
+    }
+
+    /**
+     * Abre una venta vacía colgada de un turno de caja.
+     *
+     * <p>Cuelga siempre de un arqueo, nunca del aire: una venta que no pertenece
+     * a ningún turno no se le puede reclamar a nadie cuando el cajón no cuadra.
+     *
+     * @param evento la noche en que se cobró, si la hay. Es opcional porque
+     *     también se vende un martes sin evento programado, y sirve para saber
+     *     cuánto factura la barra en cada noche.
+     */
+    static VentaDeBarra registrar(ArqueoDeCaja arqueo, Evento evento, MetodoDePago metodo) {
+        VentaDeBarra v = new VentaDeBarra();
+        v.id = UUID.randomUUID().toString();
+        v.arqueo = arqueo;
+        v.evento = evento;
+        v.metodoDePago = metodo;
+        v.totalCentimos = 0;
+        v.creadaEn = Instant.now();
+        return v;
+    }
+
+    /** Añade una línea y recalcula el total. */
+    void anadirLinea(LineaDeVenta linea) {
+        lineas.add(linea);
+        // toIntExact y no un cast: la columna es integer, y un total que no cabe
+        // tiene que reventar aquí y no dar la vuelta a negativo en la base.
+        this.totalCentimos =
+                Math.toIntExact(lineas.stream().mapToLong(LineaDeVenta::importeCentimos).sum());
     }
 
     /** Cuántas unidades salieron en esta venta, sumando todas las líneas. */

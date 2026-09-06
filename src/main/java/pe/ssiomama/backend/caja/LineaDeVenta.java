@@ -7,6 +7,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.util.UUID;
 import pe.ssiomama.backend.inventario.Producto;
 
 /**
@@ -42,6 +43,23 @@ public class LineaDeVenta {
 
     protected LineaDeVenta() {
         // Hibernate necesita un constructor sin argumentos.
+    }
+
+    /**
+     * Una línea con el precio congelado al de hoy.
+     *
+     * <p>Se copia del producto en este momento y no se lee después: si mañana
+     * sube la Cusqueña, el ticket de anoche sigue diciendo lo que se cobró
+     * anoche.
+     */
+    static LineaDeVenta de(VentaDeBarra venta, Producto producto, int cantidad) {
+        LineaDeVenta l = new LineaDeVenta();
+        l.id = UUID.randomUUID().toString();
+        l.venta = venta;
+        l.producto = producto;
+        l.cantidad = cantidad;
+        l.precioUnitarioCentimos = producto.getPrecioCentimos();
+        return l;
     }
 
     /** Lo que sumó esta línea al total del cobro. */

@@ -8,6 +8,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.UUID;
 import pe.ssiomama.backend.eventos.Sala;
 import pe.ssiomama.backend.auth.Usuario;
 
@@ -84,6 +85,50 @@ public class ArqueoDeCaja {
 
     protected ArqueoDeCaja() {
         // Hibernate necesita un constructor sin argumentos.
+    }
+
+    /**
+     * Abre el turno de una persona en una barra.
+     *
+     * <p>{@code esperadoCentimos} nace igual al fondo: al empezar, lo que
+     * debería haber en el cajón es exactamente lo que se metió. Cada venta en
+     * efectivo lo va subiendo.
+     */
+    public static ArqueoDeCaja abrir(Sala sala, Usuario responsable, int fondoCentimos) {
+        ArqueoDeCaja a = new ArqueoDeCaja();
+        a.id = UUID.randomUUID().toString();
+        a.sala = sala;
+        a.responsable = responsable;
+        a.aperturaCentimos = fondoCentimos;
+        a.esperadoCentimos = fondoCentimos;
+        a.abiertaEn = Instant.now();
+        return a;
+    }
+
+    /**
+     * Suma al cajón lo cobrado en efectivo.
+     *
+     * <p>Solo el efectivo. Las tarjetas, el Yape y las transferencias van al
+     * banco y no pasan por aquí: si sumaran, el arqueo saldría siempre corto por
+     * el importe de lo cobrado por otras vías y el descuadre dejaría de
+     * significar nada.
+     */
+    void sumarEfectivo(int centimos) {
+        this.esperadoCentimos += centimos;
+    }
+
+    /**
+     * Cierra el turno con lo que se ha contado de verdad en el cajón.
+     *
+     * <p>El descuadre se guarda calculado y no se recalcula al leerlo: es una
+     * foto del momento del cierre. Si mañana alguien corrige una venta de
+     * anoche, el descuadre que se firmó entonces no cambia — un arqueo que se
+     * recalcula solo no sirve para pedir explicaciones.
+     */
+    void cerrar(int contadoCentimos, Instant cuando) {
+        this.contadoCentimos = contadoCentimos;
+        this.diferenciaCentimos = contadoCentimos - esperadoCentimos;
+        this.cerradaEn = cuando;
     }
 
     /** ¿Sigue abierta? Se mira por la fecha de cierre, que es el hecho. */

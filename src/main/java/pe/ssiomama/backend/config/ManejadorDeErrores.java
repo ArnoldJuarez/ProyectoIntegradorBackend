@@ -6,6 +6,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
+import pe.ssiomama.backend.caja.CajaRechazada;
 import pe.ssiomama.backend.entradas.CompraRechazada;
 
 /**
@@ -74,6 +75,18 @@ public class ManejadorDeErrores {
      */
     @ExceptionHandler(CompraRechazada.class)
     public ResponseEntity<Problema> deCompra(CompraRechazada e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new Problema(e.getMessage()));
+    }
+
+    /**
+     * Una operación de caja que el negocio no admite: la caja está cerrada, es
+     * de otra persona, el producto ya no existe.
+     *
+     * <p>Mismo criterio que {@link #deCompra}: 409 con el motivo tal cual, que
+     * está escrito para leerlo quien está en la barra.
+     */
+    @ExceptionHandler(CajaRechazada.class)
+    public ResponseEntity<Problema> deCaja(CajaRechazada e) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new Problema(e.getMessage()));
     }
 }

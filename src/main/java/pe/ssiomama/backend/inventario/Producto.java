@@ -124,6 +124,27 @@ public class Producto {
         return (long) stock * costeCentimos;
     }
 
+    /**
+     * Descuenta unidades al venderlas en barra.
+     *
+     * <p><b>Deja el stock en negativo y no lo impide.</b> Es deliberado: a las
+     * dos de la mañana la botella está físicamente ahí aunque el sistema crea
+     * que no —porque alguien no registró la última compra—, y negarse a cobrar
+     * por un descuadre de papel es perder dinero de verdad. El negativo queda a
+     * la vista en la pantalla de almacén, que es donde se arregla.
+     *
+     * <p>El movimiento que explica la bajada lo crea quien llama, no esto: una
+     * entidad no debería decidir qué rastro deja otra tabla.
+     */
+    public void descontarStock(int unidades) {
+        this.stock -= unidades;
+    }
+
+    /** Repone existencias: una compra a proveedor, o un ajuste al alza. */
+    public void reponerStock(int unidades) {
+        this.stock += unidades;
+    }
+
     public int getStock() {
         return stock;
     }

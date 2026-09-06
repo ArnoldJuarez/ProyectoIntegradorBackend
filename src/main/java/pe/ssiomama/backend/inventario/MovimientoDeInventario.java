@@ -12,6 +12,8 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import java.util.UUID;
+import pe.ssiomama.backend.auth.Usuario;
 import pe.ssiomama.backend.eventos.Sala;
 
 /**
@@ -74,11 +76,48 @@ public class MovimientoDeInventario {
     @Column(name = "referencia")
     private String referencia;
 
+    /**
+     * Quién lo movió. Puede faltar: un movimiento del seed o de una importación
+     * no tiene a nadie detrás.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "usuarioId")
+    private Usuario responsable;
+
     @Column(name = "creadoEn", nullable = false)
     private Instant creadoEn;
 
     protected MovimientoDeInventario() {
         // Hibernate necesita un constructor sin argumentos.
+    }
+
+    /**
+     * El movimiento que deja una venta de barra.
+     *
+     * <p>La cantidad va <b>negativa</b>. El signo vive en el número y no solo en
+     * el tipo, que es como estaba en la base original: así una suma de
+     * movimientos da directamente el saldo, sin tener que consultar el tipo de
+     * cada fila para saber si sumar o restar.
+     *
+     * <p>El coste unitario se copia del producto en este momento. Es lo que
+     * permite calcular el margen de aquella noche aunque el proveedor haya
+     * subido el precio después.
+     *
+     * @param referencia a qué venta corresponde, para poder rastrearlo
+     */
+    public static MovimientoDeInventario porVentaDeBarra(
+            Producto producto, Sala sala, int unidades, String referencia, Usuario quien) {
+        MovimientoDeInventario m = new MovimientoDeInventario();
+        m.id = UUID.randomUUID().toString();
+        m.producto = producto;
+        m.sala = sala;
+        m.tipo = TipoDeMovimiento.VENTA;
+        m.cantidad = -Math.abs(unidades);
+        m.costeUnitarioCentimos = producto.getCosteCentimos();
+        m.referencia = referencia;
+        m.responsable = quien;
+        m.creadoEn = Instant.now();
+        return m;
     }
 
     /** ¿Entró mercancía o salió? */
@@ -129,6 +168,10 @@ public class MovimientoDeInventario {
 
     public String getReferencia() {
         return referencia;
+    }
+
+    public Usuario getResponsable() {
+        return responsable;
     }
 
     public Instant getCreadoEn() {

@@ -185,6 +185,15 @@ public class SecurityConfig {
                         .requestMatchers("/api/puerta/**")
                         .hasAnyAuthority(autoridades(Rol.EN_LA_PUERTA))
 
+                        /*
+                         * La barra, como la puerta: un rol que no es de panel y
+                         * una pantalla propia. Quien sirve copas cobra aqui y no
+                         * ve nada mas — ni clientes, ni pedidos, ni el arqueo
+                         * historico, que se mira en /api/caja desde el panel.
+                         */
+                        .requestMatchers("/api/barra/**")
+                        .hasAnyAuthority(autoridades(Rol.EN_LA_BARRA))
+
                         .anyRequest().denyAll())
                 /*
                  * El filtro va antes del de usuario y contraseña de Spring, que
