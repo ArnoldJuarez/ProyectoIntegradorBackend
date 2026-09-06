@@ -72,6 +72,55 @@ public class TipoDeEntrada {
         return Math.max(cantidad - vendidas, 0);
     }
 
+    /**
+     * Aparta unidades para un pedido que se acaba de crear.
+     *
+     * <p>El cupo se reserva <b>antes</b> de cobrar, no después. Si se esperara al
+     * pago, dos personas podrían llegar a la pasarela con la última entrada y
+     * una de las dos pagaría algo que no existe. Por eso un pedido pendiente ya
+     * cuenta como vendido, y por eso cancelarlo tiene que devolverlo.
+     *
+     * <p>No comprueba el máximo por pedido: eso es una regla de la compra —qué
+     * puede pedir una persona de una vez—, no del cupo. Aquí solo importa que no
+     * se venda más de lo que hay.
+     *
+     * @throws IllegalStateException si no quedan suficientes. Quien llama lo
+     *     traduce a un mensaje para el comprador; que reviente es preferible a
+     *     dejar {@code vendidas} por encima de {@code cantidad} en silencio.
+     */
+    public void reservarCupo(int unidades) {
+        if (unidades <= 0) {
+            throw new IllegalArgumentException("Se piden entradas de una en una, no cero ni menos.");
+        }
+        if (unidades > getDisponibles()) {
+            throw new IllegalStateException(
+                    "Solo quedan %d entradas %s.".formatted(getDisponibles(), nombre));
+        }
+        this.vendidas += unidades;
+    }
+
+    /** Devuelve el cupo de un pedido que se cae. */
+    public void liberarCupo(int unidades) {
+        this.vendidas = Math.max(this.vendidas - unidades, 0);
+    }
+
+    /**
+     * ¿Se puede comprar ahora mismo?
+     *
+     * <p>Las fechas de venta son opcionales: sin ellas el tipo está a la venta
+     * mientras el evento lo esté. Con ellas se hacen las entradas anticipadas,
+     * que dejan de venderse a una hora concreta.
+     */
+    public boolean estaALaVenta(Instant ahora) {
+        if (!activo) {
+            return false;
+        }
+        if (ventaDesde != null && ahora.isBefore(ventaDesde)) {
+            return false;
+        }
+        return ventaHasta == null || !ahora.isAfter(ventaHasta);
+    }
+
     public String getId() {
         return id;
     }

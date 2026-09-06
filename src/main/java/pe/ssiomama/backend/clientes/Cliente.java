@@ -140,6 +140,24 @@ public class Cliente {
         this.telefono = telefono;
     }
 
+    /**
+     * Anota una compra pagada en la ficha.
+     *
+     * <p>Estos tres campos son un resumen: se podrían calcular sumando los
+     * pedidos cada vez que se abre una ficha. Están precalculados porque la
+     * lista de clientes los ordena y filtra por ellos, y recalcularlos ahí
+     * significaría recorrer todos los pedidos de todos los clientes para pintar
+     * una tabla.
+     *
+     * <p>El precio de tenerlos es este método: si una compra se registra sin
+     * pasar por aquí, el resumen y los pedidos dejan de cuadrar.
+     */
+    public void registrarCompra(int importeCentimos, Instant cuando) {
+        this.gastadoCentimos += importeCentimos;
+        this.visitas += 1;
+        this.ultimaVisita = cuando;
+    }
+
     public String getId() {
         return id;
     }

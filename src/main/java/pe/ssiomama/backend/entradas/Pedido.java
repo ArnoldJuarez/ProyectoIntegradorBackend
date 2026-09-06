@@ -14,6 +14,7 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import pe.ssiomama.backend.caja.MetodoDePago;
@@ -21,22 +22,22 @@ import pe.ssiomama.backend.clientes.Cliente;
 import pe.ssiomama.backend.eventos.Evento;
 
 /**
- * Una compra de entradas — tabla {@code "Order"}.
+ * Una compra de entradas — tabla {@code "Pedido"}.
  *
- * <p>Ojo con el nombre: {@code order} es palabra reservada en SQL. Funciona
- * porque los identificadores van entrecomillados; sin las comillas, la consulta
- * fallaría con un error de sintaxis que no menciona la tabla.
+ * <p>En el esquema anterior se llamaba {@code Order}, que es palabra reservada
+ * en SQL y solo funcionaba porque los identificadores van entrecomillados. El
+ * nombre en español quita esa trampa de encima.
  *
  * <h2>El código, y por qué no es el id</h2>
  *
- * <p>{@code code} es lo que se le enseña al cliente ({@code DSC-XXXXXX}) y lo
+ * <p>{@code codigo} es lo que se le enseña al cliente ({@code DSC-XXXXXX}) y lo
  * que aparece en la URL de sus entradas. Es distinto del id a propósito: el id
  * es interno y el código es corto, legible por teléfono y no dice cuántos
  * pedidos lleva el local.
  *
  * <h2>Los importes van guardados</h2>
  *
- * <p>{@code totalCents} podría sumarse desde las líneas, pero es lo que se le
+ * <p>{@code totalCentimos} podría sumarse desde las líneas, pero es lo que se le
  * cobró de verdad a esa persona. Si mañana cambia un precio o una comisión, este
  * pedido tiene que seguir diciendo lo que se pagó entonces.
  */
@@ -100,6 +101,70 @@ public class Pedido {
 
     protected Pedido() {
         // Hibernate necesita un constructor sin argumentos.
+    }
+
+    /**
+     * Abre un pedido sin pagar, con el cupo ya apartado.
+     *
+     * <p>Nace {@link EstadoDePedido#PENDIENTE} y no «vacío»: las líneas ya
+     * descontaron existencias del tipo de entrada, así que un pendiente ocupa
+     * sitio de verdad. Quien lo cancele tiene que devolver ese cupo.
+     *
+     * <p>Los importes se calculan aquí y no llegan desde el navegador. Es la
+     * regla más importante de esta clase: el precio lo pone el servidor. Un
+     * total que viene del cliente es un total que se puede editar.
+     */
+    static Pedido abrir(
+            String codigo, Cliente cliente, Evento evento, int comisionCentimos, Instant cuando) {
+        Pedido p = new Pedido();
+        p.id = UUID.randomUUID().toString();
+        p.codigo = codigo;
+        p.cliente = cliente;
+        p.evento = evento;
+        p.subtotalCentimos = 0;
+        p.comisionCentimos = comisionCentimos;
+        p.totalCentimos = 0;
+        p.estado = EstadoDePedido.PENDIENTE;
+        p.creadoEn = cuando;
+        return p;
+    }
+
+    /**
+     * Añade una línea y recalcula los totales.
+     *
+     * <p>La comisión se pasa entera al abrir y se vuelve a fijar aquí porque
+     * depende del subtotal, que no se conoce hasta tener todas las líneas.
+     */
+    void anadirLinea(LineaDePedido linea, int comisionCentimos) {
+        lineas.add(linea);
+        // toIntExact y no un cast: la columna es integer, y un total que no cabe
+        // tiene que reventar aquí y no dar la vuelta a negativo en la base.
+        this.subtotalCentimos =
+                Math.toIntExact(lineas.stream().mapToLong(LineaDePedido::importeCentimos).sum());
+        this.comisionCentimos = comisionCentimos;
+        this.totalCentimos = subtotalCentimos + comisionCentimos;
+    }
+
+    /**
+     * Marca el pedido como pagado.
+     *
+     * <p>No emite las entradas: de eso se encarga quien orquesta el cobro, que
+     * es el único que sabe firmarlas. Aquí solo se cierra el estado.
+     *
+     * @param referencia lo que devuelve la pasarela. Hoy es un valor simulado,
+     *     porque no hay pasarela conectada; cuando la haya, es lo que permite
+     *     buscar el cobro en su panel cuando alguien reclama.
+     */
+    void marcarPagado(MetodoDePago metodo, String referencia, Instant cuando) {
+        this.estado = EstadoDePedido.PAGADO;
+        this.metodoDePago = metodo;
+        this.referenciaDePago = referencia;
+        this.pagadoEn = cuando;
+    }
+
+    /** ¿Se puede pagar todavía? Solo un pendiente. */
+    public boolean admitePago() {
+        return estado == EstadoDePedido.PENDIENTE;
     }
 
     /** Cuántas entradas se compraron, sumando todas las líneas. */

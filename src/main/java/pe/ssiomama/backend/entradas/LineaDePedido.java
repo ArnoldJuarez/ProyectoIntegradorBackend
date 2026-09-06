@@ -7,10 +7,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.util.UUID;
 import pe.ssiomama.backend.eventos.TipoDeEntrada;
 
 /**
- * Cuántas entradas de un tipo lleva un pedido — tabla {@code "OrderItem"}.
+ * Cuántas entradas de un tipo lleva un pedido — tabla {@code "LineaPedido"}.
  *
  * <p>Guarda el precio de aquel momento, no el actual del tipo de entrada: un
  * pedido de hace tres meses tiene que seguir diciendo lo que costó, aunque la
@@ -41,6 +42,23 @@ public class LineaDePedido {
 
     protected LineaDePedido() {
         // Hibernate necesita un constructor sin argumentos.
+    }
+
+    /**
+     * Una línea nueva, con el precio congelado al de hoy.
+     *
+     * <p>El precio se copia del tipo de entrada en este instante y no se lee
+     * después: es lo que hace que un pedido de hace tres meses siga diciendo lo
+     * que costó.
+     */
+    static LineaDePedido de(Pedido pedido, TipoDeEntrada tipo, int cantidad) {
+        LineaDePedido l = new LineaDePedido();
+        l.id = UUID.randomUUID().toString();
+        l.pedido = pedido;
+        l.tipoDeEntrada = tipo;
+        l.cantidad = cantidad;
+        l.precioUnitarioCentimos = tipo.getPrecioCentimos();
+        return l;
     }
 
     /** Lo que sumó esta línea al subtotal. */

@@ -79,4 +79,24 @@ public interface EventoRepository extends JpaRepository<Evento, String> {
             """)
     Optional<Evento> buscarProximaNoche(
             @Param("estado") EstadoDeEvento estado, @Param("ahora") Instant ahora);
+
+    /**
+     * Una noche por su slug, <b>sin arrastrar sus tipos de entrada</b>.
+     *
+     * <p>La diferencia con {@link #buscarPorSlugConDetalle} no es de eficiencia,
+     * es de corrección, y costó un test en rojo averiguarlo.
+     *
+     * <p>Al vender hay que bloquear los tipos de entrada con
+     * {@code select ... for update}. Pero si antes se han cargado con un
+     * {@code join fetch}, ya están en el contexto de persistencia, y entonces la
+     * consulta con bloqueo <b>devuelve las instancias que ya había</b>: Hibernate
+     * pide el bloqueo a la base, sí, pero no vuelve a leer la fila. El resultado
+     * es que veinte compras simultáneas leen todas el mismo «vendidas» viejo y
+     * se pisan los incrementos en silencio — sin ningún error, con veinte
+     * pedidos creados y dos entradas descontadas.
+     *
+     * <p>Por eso vender empieza por aquí: la noche se carga suelta, y los tipos
+     * los trae por primera vez la consulta que los bloquea.
+     */
+    Optional<Evento> findBySlug(String slug);
 }

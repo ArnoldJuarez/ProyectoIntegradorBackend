@@ -136,6 +136,20 @@ public class SecurityConfig {
                         // llama para confirmar.
                         .requestMatchers(HttpMethod.POST, "/api/publico/reservas").permitAll()
 
+                        /*
+                         * Comprar entradas: sin cuenta, como el resto de la web
+                         * publica. Se enumeran una a una y no con un comodin,
+                         * para que anadir manana otro POST bajo /pedidos no
+                         * quede abierto sin que nadie lo decida.
+                         *
+                         * El GET de un pedido tambien es publico: quien compro
+                         * no tiene cuenta, y lo unico que tiene es el enlace con
+                         * su codigo. Por eso la respuesta no lleva ni su correo
+                         * ni su telefono — ver CompraController.
+                         */
+                        .requestMatchers(HttpMethod.POST, "/api/publico/pedidos").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/publico/pedidos/*/pagar").permitAll()
+
                         // Publicas: entrar y salir.
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/logout").permitAll()

@@ -101,6 +101,38 @@ public class Entrada {
         // Hibernate necesita un constructor sin argumentos.
     }
 
+    /**
+     * Emite una entrada al confirmarse el pago.
+     *
+     * <p>El id se genera aquí y no lo asigna la base por un motivo que no es de
+     * estilo: el código del QR es {@code id.firma}, así que hay que <b>conocer
+     * el id antes de insertar</b>. Con un id autogenerado en el servidor de base
+     * de datos habría que insertar primero y actualizar el código después, y una
+     * entrada existiría un instante sin código válido.
+     *
+     * @param codigoFirmado lo que produce {@link FirmaDeEntrada#codificar}. Se
+     *     recibe ya hecho en vez de firmar aquí para que la entidad no dependa
+     *     del secreto ni de un componente de Spring.
+     */
+    static Entrada emitir(
+            Pedido pedido,
+            TipoDeEntrada tipo,
+            String id,
+            String codigoFirmado,
+            String titular,
+            Instant cuando) {
+        Entrada e = new Entrada();
+        e.id = id;
+        e.codigo = codigoFirmado;
+        e.pedido = pedido;
+        e.tipoDeEntrada = tipo;
+        e.evento = pedido.getEvento();
+        e.titular = titular == null || titular.isBlank() ? null : titular;
+        e.estado = EstadoDeEntrada.VALIDA;
+        e.emitidaEn = cuando;
+        return e;
+    }
+
     /** ¿Deja pasar ahora mismo? */
     public boolean esValida() {
         return estado.dejaPasar();

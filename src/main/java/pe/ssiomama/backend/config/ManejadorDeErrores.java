@@ -6,6 +6,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
+import pe.ssiomama.backend.entradas.CompraRechazada;
 
 /**
  * Da a los errores de la API una forma única: {@code {"error": "..."}}.
@@ -61,5 +62,18 @@ public class ManejadorDeErrores {
                 .orElse("Revisa los datos.");
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new Problema(mensaje));
+    }
+
+    /**
+     * Una compra que el negocio no admite: se agotaron, es de otra fecha, el
+     * pedido ya no se puede pagar.
+     *
+     * <p>409 y no 400: la petición estaba bien formada, lo que pasa es que el
+     * estado del mundo cambió mientras alguien rellenaba el formulario. El
+     * mensaje va escrito para el comprador y sale tal cual.
+     */
+    @ExceptionHandler(CompraRechazada.class)
+    public ResponseEntity<Problema> deCompra(CompraRechazada e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new Problema(e.getMessage()));
     }
 }
