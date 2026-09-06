@@ -65,7 +65,15 @@ public class InventarioController {
             int alertaDeStock,
             boolean necesitaReposicion,
             int faltanParaElUmbral,
-            long valorACosteCentimos) {
+            long valorACosteCentimos,
+            /*
+             * El coste y el precio salen aquí desde que el panel edita la ficha
+             * del producto: el formulario los rellena con lo que ya hay, y sin
+             * ellos cada edición los pisaría. De paso, tenerlos en la tabla deja
+             * ver el margen sin abrir nada.
+             */
+            int costeCentimos,
+            int precioCentimos) {
 
         static LineaDeStock de(Producto p) {
             return new LineaDeStock(
@@ -78,7 +86,9 @@ public class InventarioController {
                     p.getAlertaDeStock(),
                     p.necesitaReposicion(),
                     p.faltanParaElUmbral(),
-                    p.valorACosteCentimos());
+                    p.valorACosteCentimos(),
+                    p.getCosteCentimos(),
+                    p.getPrecioCentimos());
         }
     }
 

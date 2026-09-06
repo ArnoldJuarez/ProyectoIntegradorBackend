@@ -30,4 +30,7 @@ public interface ProductoRepository extends JpaRepository<Producto, String> {
                      p.nombre asc
             """)
     List<Producto> buscarConStock();
+
+    /** ¿Está cogido ese SKU? Lo usa el generador para no repetir códigos. */
+    boolean existsBySku(String sku);
 }

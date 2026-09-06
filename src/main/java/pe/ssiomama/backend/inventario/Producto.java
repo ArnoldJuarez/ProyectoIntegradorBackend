@@ -9,6 +9,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -97,6 +98,83 @@ public class Producto {
 
     protected Producto() {
         // Hibernate necesita un constructor sin argumentos.
+    }
+
+    /**
+     * Da de alta un producto.
+     *
+     * <p>Nace con <b>cero unidades</b>, no con las que haya en el almacén. Meter
+     * existencias es un movimiento aparte —una compra— y tiene que serlo: si el
+     * alta pudiera fijar el stock, habría mercancía en el sistema sin ninguna
+     * fila que explique de dónde salió, y el histórico dejaría de cuadrar con el
+     * saldo desde el primer día.
+     */
+    static Producto crear(
+            String sku,
+            String nombre,
+            CategoriaDeProducto categoria,
+            UnidadDeProducto unidad,
+            int costeCentimos,
+            int precioCentimos,
+            int alertaDeStock,
+            boolean activo) {
+
+        Producto p = new Producto();
+        p.id = UUID.randomUUID().toString();
+        p.sku = sku;
+        p.nombre = nombre;
+        p.categoria = categoria;
+        p.unidad = unidad;
+        p.costeCentimos = costeCentimos;
+        p.precioCentimos = precioCentimos;
+        p.alertaDeStock = alertaDeStock;
+        p.activo = activo;
+        p.stock = 0;
+        return p;
+    }
+
+    /**
+     * Cambia la ficha de un producto.
+     *
+     * <p>Ni el SKU ni el stock se tocan aquí. El SKU porque puede estar impreso
+     * en una etiqueta de almacén; el stock porque es un saldo que solo mueven
+     * los movimientos, y editarlo a mano desde un formulario lo separaría del
+     * histórico sin dejar rastro de quién lo hizo.
+     */
+    void actualizar(
+            String nombre,
+            CategoriaDeProducto categoria,
+            UnidadDeProducto unidad,
+            int costeCentimos,
+            int precioCentimos,
+            int alertaDeStock,
+            boolean activo) {
+
+        this.nombre = nombre;
+        this.categoria = categoria;
+        this.unidad = unidad;
+        this.costeCentimos = costeCentimos;
+        this.precioCentimos = precioCentimos;
+        this.alertaDeStock = alertaDeStock;
+        this.activo = activo;
+    }
+
+    /**
+     * Apunta lo que se acaba de pagar por unidad.
+     *
+     * <p>Se guarda el <b>último</b> precio pagado, no una media. Si el proveedor
+     * sube el pisco y el coste guardado se queda en el viejo, el margen que
+     * calcula el panel se infla solo, y con él las decisiones que se toman
+     * mirándolo. Lo que vale para decidir a cuánto se vende esta semana es lo
+     * que costó esta semana.
+     */
+    void apuntarCosteDeCompra(int centimosPorUnidad) {
+        this.costeCentimos = centimosPorUnidad;
+    }
+
+    /** Mueve el saldo en el sentido que diga el movimiento. Puede quedar negativo. */
+    void moverStock(int unidadesConSigno) {
+        this.stock += unidadesConSigno;
     }
 
     /**

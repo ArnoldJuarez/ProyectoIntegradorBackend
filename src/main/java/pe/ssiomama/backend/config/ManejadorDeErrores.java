@@ -9,6 +9,7 @@ import org.springframework.web.server.ResponseStatusException;
 import pe.ssiomama.backend.caja.CajaRechazada;
 import pe.ssiomama.backend.entradas.CompraRechazada;
 import pe.ssiomama.backend.eventos.EventoRechazado;
+import pe.ssiomama.backend.inventario.AlmacenRechazado;
 
 /**
  * Da a los errores de la API una forma única: {@code {"error": "..."}}.
@@ -97,6 +98,15 @@ public class ManejadorDeErrores {
      */
     @ExceptionHandler(EventoRechazado.class)
     public ResponseEntity<Problema> deEvento(EventoRechazado e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new Problema(e.getMessage()));
+    }
+
+    /**
+     * Una operación de almacén que el negocio no admite: registrar una venta a
+     * mano, una cantidad de cero, una categoría que no existe.
+     */
+    @ExceptionHandler(AlmacenRechazado.class)
+    public ResponseEntity<Problema> deAlmacen(AlmacenRechazado e) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new Problema(e.getMessage()));
     }
 }

@@ -120,6 +120,43 @@ public class MovimientoDeInventario {
         return m;
     }
 
+    /**
+     * Un movimiento registrado a mano desde el panel: compra, merma o ajuste.
+     *
+     * <p>{@code VENTA} no se puede crear por aquí, y la comprobación está en el
+     * servicio, no en esta fábrica: una venta la escribe el punto de venta y
+     * nadie más. Si se pudiera registrar a mano habría ventas sin dinero detrás,
+     * y el arqueo dejaría de cuadrar con el inventario.
+     *
+     * @param unidadesConSigno ya con su sentido resuelto: positivo si entra
+     *     mercancía, negativo si sale
+     * @param costeUnitarioCentimos lo pagado por unidad. Solo significa algo en
+     *     una compra; en merma y ajuste va a cero porque no se pagó nada.
+     * @param nota lo que explica el movimiento: un número de albarán, «se rompió
+     *     una caja», «recuento del lunes»
+     */
+    public static MovimientoDeInventario aMano(
+            Producto producto,
+            Sala sala,
+            TipoDeMovimiento tipo,
+            int unidadesConSigno,
+            int costeUnitarioCentimos,
+            String nota,
+            Usuario quien) {
+
+        MovimientoDeInventario m = new MovimientoDeInventario();
+        m.id = UUID.randomUUID().toString();
+        m.producto = producto;
+        m.sala = sala;
+        m.tipo = tipo;
+        m.cantidad = unidadesConSigno;
+        m.costeUnitarioCentimos = costeUnitarioCentimos;
+        m.referencia = nota == null || nota.isBlank() ? null : nota.trim();
+        m.responsable = quien;
+        m.creadoEn = Instant.now();
+        return m;
+    }
+
     /** ¿Entró mercancía o salió? */
     public boolean esEntrada() {
         return cantidad > 0;
