@@ -12,9 +12,11 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -125,6 +127,107 @@ public class Evento {
 
     protected Evento() {
         // Hibernate necesita un constructor sin argumentos.
+    }
+
+    /**
+     * Crea una noche nueva.
+     *
+     * <p>{@code empiezaA} se iguala a la apertura de puertas a propósito, igual
+     * que hacía el sistema anterior: la noche se factura por el día en que abren
+     * las puertas, y tener dos instantes distintos que casi siempre coinciden
+     * solo genera preguntas sobre cuál es el bueno. El día que haga falta
+     * separarlos —un concierto que empieza tres horas después de abrir— se
+     * añade al formulario.
+     */
+    static Evento crear(
+            String slug,
+            String titulo,
+            String descripcion,
+            Sala sala,
+            Instant puertasA,
+            Instant terminaA,
+            int edadMinima,
+            String vestimenta,
+            EstadoDeEvento estado) {
+
+        Evento e = new Evento();
+        e.id = UUID.randomUUID().toString();
+        e.slug = slug;
+        e.titulo = titulo;
+        e.descripcion = vacioANulo(descripcion);
+        e.sala = sala;
+        e.puertasA = puertasA;
+        e.empiezaA = puertasA;
+        e.terminaA = terminaA;
+        e.edadMinima = edadMinima;
+        e.vestimenta = vacioANulo(vestimenta);
+        e.estado = estado;
+        e.publicadoEn = estado == EstadoDeEvento.PUBLICADO ? Instant.now() : null;
+        e.creadoEn = Instant.now();
+        return e;
+    }
+
+    /**
+     * Cambia los datos de una noche.
+     *
+     * <p><b>El slug no se toca.</b> Forma parte de la URL pública, y cambiarlo
+     * rompería los enlaces que ya se compartieron en redes y los que la gente
+     * tiene guardados. Un título nuevo con la dirección de antes es mucho menos
+     * grave que una dirección que da 404.
+     *
+     * <p>{@code publicadoEn} solo se pone la primera vez que se publica. Es la
+     * fecha en que la noche salió a la calle, no la del último retoque: si se
+     * despublica y se vuelve a publicar, sigue siendo la original.
+     */
+    void actualizar(
+            String titulo,
+            String descripcion,
+            Sala sala,
+            Instant puertasA,
+            Instant terminaA,
+            int edadMinima,
+            String vestimenta,
+            EstadoDeEvento estado) {
+
+        this.titulo = titulo;
+        this.descripcion = vacioANulo(descripcion);
+        this.sala = sala;
+
+        /*
+         * Al mover las puertas, la hora de empezar se mueve con ellas y
+         * conserva el hueco.
+         *
+         * No se iguala a la apertura como al crear: una noche puede abrir a las
+         * 20:00 y arrancar la música a las 21:00, y esa hora de diferencia es un
+         * dato que alguien decidió. Igualarlas en cada edición la borraría en
+         * silencio, y quien solo venía a corregir una falta de ortografía no se
+         * enteraría de que ha movido el comienzo.
+         */
+        this.empiezaA = puertasA.plus(Duration.between(this.puertasA, this.empiezaA));
+        this.puertasA = puertasA;
+        this.terminaA = terminaA;
+        this.edadMinima = edadMinima;
+        this.vestimenta = vacioANulo(vestimenta);
+        this.estado = estado;
+
+        if (estado == EstadoDeEvento.PUBLICADO && publicadoEn == null) {
+            this.publicadoEn = Instant.now();
+        }
+    }
+
+    /** La imagen del cartel. Hoy es una dirección; la subida de archivos no está migrada. */
+    void cambiarPortada(String url) {
+        this.portada = vacioANulo(url);
+    }
+
+    /** ¿Cambia la fecha respecto a la que ya tenía? */
+    boolean cambiaLaFecha(Instant nuevaApertura) {
+        return !puertasA.equals(nuevaApertura);
+    }
+
+    /** Un texto vacío en la base es un nulo, no una cadena de cero caracteres. */
+    private static String vacioANulo(String valor) {
+        return valor == null || valor.isBlank() ? null : valor.trim();
     }
 
     /** Aforo puesto a la venta, sumando todos los tipos activos. */

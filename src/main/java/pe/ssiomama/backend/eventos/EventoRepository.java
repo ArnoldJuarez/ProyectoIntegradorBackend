@@ -99,4 +99,7 @@ public interface EventoRepository extends JpaRepository<Evento, String> {
      * los trae por primera vez la consulta que los bloquea.
      */
     Optional<Evento> findBySlug(String slug);
+
+    /** ¿Está cogido ese slug? Lo usa el generador para no repetir direcciones. */
+    boolean existsBySlug(String slug);
 }

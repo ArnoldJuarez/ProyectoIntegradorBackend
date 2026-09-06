@@ -67,6 +67,13 @@ public class EventoController {
             int cantidad,
             int vendidas,
             int disponibles,
+            /*
+             * Estos dos salen aquí desde que el panel edita los tipos de
+             * entrada: el formulario los rellena con lo que ya hay, y sin ellos
+             * cada edición los pisaría con el valor por defecto.
+             */
+            int maxPorPedido,
+            int consumicionesIncluidas,
             boolean activo) {
 
         static TipoDeEntradaResumen de(TipoDeEntrada t) {
@@ -78,6 +85,8 @@ public class EventoController {
                     t.getCantidad(),
                     t.getVendidas(),
                     t.getDisponibles(),
+                    t.getMaximoPorPedido(),
+                    t.getConsumicionesIncluidas(),
                     t.isActivo());
         }
     }

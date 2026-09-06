@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
 import pe.ssiomama.backend.caja.CajaRechazada;
 import pe.ssiomama.backend.entradas.CompraRechazada;
+import pe.ssiomama.backend.eventos.EventoRechazado;
 
 /**
  * Da a los errores de la API una forma única: {@code {"error": "..."}}.
@@ -87,6 +88,15 @@ public class ManejadorDeErrores {
      */
     @ExceptionHandler(CajaRechazada.class)
     public ResponseEntity<Problema> deCaja(CajaRechazada e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new Problema(e.getMessage()));
+    }
+
+    /**
+     * Un cambio en la programación que el negocio no admite: mover una fecha con
+     * entradas fuera, pasarse del aforo, bajar un cupo por debajo de lo vendido.
+     */
+    @ExceptionHandler(EventoRechazado.class)
+    public ResponseEntity<Problema> deEvento(EventoRechazado e) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new Problema(e.getMessage()));
     }
 }

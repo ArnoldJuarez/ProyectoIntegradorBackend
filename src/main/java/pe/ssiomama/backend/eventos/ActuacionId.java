@@ -29,6 +29,14 @@ public class ActuacionId implements Serializable {
         // Hibernate necesita un constructor sin argumentos.
     }
 
+    /** La clave de una actuación concreta. */
+    static ActuacionId de(String eventoId, String artistaId) {
+        ActuacionId id = new ActuacionId();
+        id.eventoId = eventoId;
+        id.artistaId = artistaId;
+        return id;
+    }
+
     public String getEventoId() {
         return eventoId;
     }

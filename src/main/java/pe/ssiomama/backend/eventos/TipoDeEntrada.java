@@ -8,6 +8,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * Un tipo de entrada de una noche: Early Bird, General, VIP — tabla
@@ -65,6 +66,74 @@ public class TipoDeEntrada {
 
     protected TipoDeEntrada() {
         // Hibernate necesita un constructor sin argumentos.
+    }
+
+    /**
+     * Crea un tipo de entrada para una noche.
+     *
+     * <p>{@code ventaHasta} se fija al comienzo del evento: no tiene sentido
+     * vender una entrada anticipada cuando la noche ya empezó. Quien quiera otra
+     * fecha de corte —una Early Bird que cierra una semana antes— la edita
+     * después; el valor por defecto es el que no sorprende a nadie.
+     */
+    static TipoDeEntrada crear(
+            Evento evento,
+            String nombre,
+            String descripcion,
+            int precioCentimos,
+            int cantidad,
+            int maximoPorPedido,
+            int consumicionesIncluidas,
+            boolean activo) {
+
+        TipoDeEntrada t = new TipoDeEntrada();
+        t.id = UUID.randomUUID().toString();
+        t.evento = evento;
+        t.nombre = nombre;
+        t.descripcion = descripcion == null || descripcion.isBlank() ? null : descripcion.trim();
+        t.precioCentimos = precioCentimos;
+        t.cantidad = cantidad;
+        t.vendidas = 0;
+        t.ventaHasta = evento.getEmpiezaA();
+        t.maximoPorPedido = maximoPorPedido;
+        t.consumicionesIncluidas = consumicionesIncluidas;
+        t.activo = activo;
+        return t;
+    }
+
+    /**
+     * Cambia los datos de un tipo de entrada.
+     *
+     * <p>{@code vendidas} no se toca nunca desde aquí. Es un recuento de hechos
+     * —cuánta gente compró—, no un campo del formulario, y editarlo a mano
+     * descuadraría el aforo respecto a los pedidos que ya existen.
+     */
+    void actualizar(
+            String nombre,
+            String descripcion,
+            int precioCentimos,
+            int cantidad,
+            int maximoPorPedido,
+            int consumicionesIncluidas,
+            boolean activo) {
+
+        this.nombre = nombre;
+        this.descripcion = descripcion == null || descripcion.isBlank() ? null : descripcion.trim();
+        this.precioCentimos = precioCentimos;
+        this.cantidad = cantidad;
+        this.maximoPorPedido = maximoPorPedido;
+        this.consumicionesIncluidas = consumicionesIncluidas;
+        this.activo = activo;
+    }
+
+    /** Lo retira de la venta sin borrarlo: las entradas ya emitidas siguen valiendo. */
+    void retirarDeLaVenta() {
+        this.activo = false;
+    }
+
+    /** ¿Se ha vendido alguna? Decide si se puede borrar o solo retirar. */
+    public boolean tieneVentas() {
+        return vendidas > 0;
     }
 
     /** Cuántas quedan. Nunca negativo, aunque el contador se desajustara. */
