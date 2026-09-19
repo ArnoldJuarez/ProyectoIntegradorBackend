@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
 import pe.ssiomama.backend.caja.CajaRechazada;
+import pe.ssiomama.backend.clientes.CrmRechazado;
 import pe.ssiomama.backend.entradas.CompraRechazada;
 import pe.ssiomama.backend.eventos.EventoRechazado;
 import pe.ssiomama.backend.inventario.AlmacenRechazado;
@@ -107,6 +108,15 @@ public class ManejadorDeErrores {
      */
     @ExceptionHandler(AlmacenRechazado.class)
     public ResponseEntity<Problema> deAlmacen(AlmacenRechazado e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new Problema(e.getMessage()));
+    }
+
+    /**
+     * Una operación del CRM que el negocio no admite: un segmento que no existe,
+     * una campaña por correo sin asunto, cambiar una que ya salió.
+     */
+    @ExceptionHandler(CrmRechazado.class)
+    public ResponseEntity<Problema> deCrm(CrmRechazado e) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new Problema(e.getMessage()));
     }
 }

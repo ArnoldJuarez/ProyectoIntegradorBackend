@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
+import pe.ssiomama.backend.NocheDePrueba;
 import pe.ssiomama.backend.clientes.Cliente;
 import pe.ssiomama.backend.clientes.ClienteRepository;
 import pe.ssiomama.backend.clientes.InteraccionRepository;
@@ -41,8 +44,19 @@ class ReservadosTest {
 
     private static final String DOMINIO_DE_PRUEBA = "@ejemplo.test";
 
-    /** Una noche PUBLISHED y futura del seed. */
-    private static final String NOCHE = "viernes-urbano";
+    /**
+     * La noche contra la que se reserva, creada por esta prueba.
+     *
+     * <p>No se usa una del seed. El endpoint rechaza reservas de una noche que
+     * ya empezó —con razón—, así que atarse a una fecha fija le pone caducidad
+     * a la prueba: el día que el calendario pasó {@code viernes-urbano}, seis
+     * comprobaciones se pusieron en rojo sin que nadie tocara el código.
+     *
+     * <p>Esta va por HTTP y no puede controlar el reloj como hace
+     * {@code CompraTest}, así que se fabrica su propia noche con fecha futura y
+     * se borra al terminar.
+     */
+    private static String NOCHE;
 
     private final ObjectMapper json = new ObjectMapper();
 
@@ -51,6 +65,13 @@ class ReservadosTest {
 
     @Autowired
     private ClienteRepository clientes;
+
+    @BeforeAll
+    static void crearLaNoche(@Autowired JdbcTemplate jdbc) {
+        // Por si una ejecución anterior se cortó a mitad.
+        NocheDePrueba.limpiar(jdbc);
+        NOCHE = NocheDePrueba.slugDe(jdbc, NocheDePrueba.crear(jdbc, "Noche de prueba · reservados"));
+    }
 
     @AfterAll
     static void limpiar(
@@ -73,6 +94,11 @@ class ReservadosTest {
                     .toList());
         }
         clientes.deleteAll(deMentira);
+    }
+
+    @AfterAll
+    static void borrarLaNoche(@Autowired JdbcTemplate jdbc) {
+        NocheDePrueba.limpiar(jdbc);
     }
 
     private static String correoNuevo() {

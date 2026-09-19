@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import jakarta.persistence.EntityManager;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -17,6 +18,7 @@ import pe.ssiomama.backend.clientes.ClienteRepository;
 import pe.ssiomama.backend.clientes.FidelidadRepository;
 import pe.ssiomama.backend.entradas.Compra.Comprador;
 import pe.ssiomama.backend.entradas.Compra.Peticion;
+import pe.ssiomama.backend.eventos.EventoRepository;
 import pe.ssiomama.backend.eventos.TipoDeEntradaRepository;
 
 /**
@@ -33,7 +35,18 @@ import pe.ssiomama.backend.eventos.TipoDeEntradaRepository;
 @Transactional
 class CompraTest {
 
-    /** Una noche publicada y con entradas a la venta. */
+    /**
+     * La noche contra la que se compra.
+     *
+     * <p>Sirve cualquiera del seed <b>porque el reloj lo pone la prueba</b>: el
+     * servicio recibe el instante como parámetro y aquí se le pasa un momento
+     * dentro de la ventana de venta de esa noche — ver {@link #mientrasSeVende}.
+     *
+     * <p>Antes se usaba {@code Instant.now()} y la suite tenía fecha de
+     * caducidad: el día que el calendario pasó esta noche, su venta se cerró
+     * sola y diecisiete pruebas se pusieron en rojo sin que nadie tocara el
+     * código.
+     */
     private static final String NOCHE = "viernes-urbano";
 
     /** Otra distinta, para el intento de mezclar tipos de dos eventos. */
@@ -50,6 +63,9 @@ class CompraTest {
 
     @Autowired
     private TipoDeEntradaRepository tipos;
+
+    @Autowired
+    private EventoRepository eventos;
 
     @Autowired
     private PedidoRepository pedidos;
@@ -87,6 +103,17 @@ class CompraTest {
                 nombre);
     }
 
+    /**
+     * Un instante en el que esa noche todavía se vende.
+     *
+     * <p>La venta se corta al empezar la noche, así que una hora antes siempre
+     * está dentro. Al fijarlo desde la prueba, el resultado no cambia por mucho
+     * que pase el tiempo real.
+     */
+    private Instant mientrasSeVende(String slug) {
+        return eventos.findBySlug(slug).orElseThrow().getEmpiezaA().minus(Duration.ofHours(1));
+    }
+
     private Comprador alguienNuevo() {
         return new Comprador(
                 "Ana", "Prueba", CORREO.formatted(System.nanoTime()), "999888777");
@@ -112,7 +139,7 @@ class CompraTest {
         int vendidasAntes = tipos.findById(general).orElseThrow().getVendidas();
 
         var abierto = compra.abrir(
-                NOCHE, alguienNuevo(), List.of(new Peticion(general, 3)), Instant.now());
+                NOCHE, alguienNuevo(), List.of(new Peticion(general, 3)), mientrasSeVende(NOCHE));
 
         comoUnaPeticionNueva();
 
@@ -137,7 +164,7 @@ class CompraTest {
         int precio = tipos.findById(vip).orElseThrow().getPrecioCentimos();
 
         var abierto = compra.abrir(
-                NOCHE, alguienNuevo(), List.of(new Peticion(vip, 2)), Instant.now());
+                NOCHE, alguienNuevo(), List.of(new Peticion(vip, 2)), mientrasSeVende(NOCHE));
 
         int subtotalEsperado = precio * 2;
         assertThat(abierto.subtotalCentimos()).isEqualTo(subtotalEsperado);
@@ -160,7 +187,7 @@ class CompraTest {
                 NOCHE,
                 alguienNuevo(),
                 List.of(new Peticion(general, 2), new Peticion(vip, 1)),
-                Instant.now());
+                mientrasSeVende(NOCHE));
 
         assertThat(abierto.subtotalCentimos()).isEqualTo(pGeneral * 2 + pVip);
         assertThat(abierto.entradas()).isEqualTo(3);
@@ -178,7 +205,7 @@ class CompraTest {
         comoUnaPeticionNueva();
 
         assertThatThrownBy(() -> compra.abrir(
-                        NOCHE, alguienNuevo(), List.of(new Peticion(vip, 4)), Instant.now()))
+                        NOCHE, alguienNuevo(), List.of(new Peticion(vip, 4)), mientrasSeVende(NOCHE)))
                 .isInstanceOf(CompraRechazada.class)
                 // El mensaje dice cuántas quedan: «no disponible» a secas hace
                 // que la persona lo intente otra vez con lo mismo.
@@ -193,7 +220,7 @@ class CompraTest {
         comoUnaPeticionNueva();
 
         assertThatThrownBy(() -> compra.abrir(
-                        NOCHE, alguienNuevo(), List.of(new Peticion(vip, 1)), Instant.now()))
+                        NOCHE, alguienNuevo(), List.of(new Peticion(vip, 1)), mientrasSeVende(NOCHE)))
                 .isInstanceOf(CompraRechazada.class)
                 .hasMessageContaining("agotado");
     }
@@ -208,7 +235,7 @@ class CompraTest {
                         NOCHE,
                         alguienNuevo(),
                         List.of(new Peticion(general, maximo + 1)),
-                        Instant.now()))
+                        mientrasSeVende(NOCHE)))
                 .isInstanceOf(CompraRechazada.class)
                 .hasMessageContaining("Máximo %d".formatted(maximo));
     }
@@ -220,7 +247,7 @@ class CompraTest {
 
         assertThatThrownBy(() -> compra.abrir(
                         NOCHE_CERRADA, alguienNuevo(), List.of(new Peticion(general, 1)),
-                        Instant.now()))
+                        mientrasSeVende(NOCHE)))
                 .isInstanceOf(CompraRechazada.class)
                 .hasMessageContaining("no está a la venta");
     }
@@ -237,7 +264,7 @@ class CompraTest {
 
         assertThatThrownBy(() -> compra.abrir(
                         NOCHE, alguienNuevo(), List.of(new Peticion(deLaOtraNoche, 1)),
-                        Instant.now()))
+                        mientrasSeVende(NOCHE)))
                 .isInstanceOf(CompraRechazada.class)
                 .hasMessageContaining("ya no está disponible");
     }
@@ -245,7 +272,7 @@ class CompraTest {
     @Test
     @DisplayName("un pedido sin lineas no es un pedido")
     void sinLineas() {
-        assertThatThrownBy(() -> compra.abrir(NOCHE, alguienNuevo(), List.of(), Instant.now()))
+        assertThatThrownBy(() -> compra.abrir(NOCHE, alguienNuevo(), List.of(), mientrasSeVende(NOCHE)))
                 .isInstanceOf(CompraRechazada.class);
     }
 
@@ -264,7 +291,7 @@ class CompraTest {
                         NOCHE,
                         alguienNuevo(),
                         List.of(new Peticion(general, 2), new Peticion(vip, 1)),
-                        Instant.now()))
+                        mientrasSeVende(NOCHE)))
                 .isInstanceOf(CompraRechazada.class);
 
         assertThat(tipos.findById(general).orElseThrow().getVendidas())
@@ -280,9 +307,9 @@ class CompraTest {
         String general = idDeTipo(NOCHE, "General");
         Comprador ana = alguienNuevo();
 
-        compra.abrir(NOCHE, ana, List.of(new Peticion(general, 1)), Instant.now());
+        compra.abrir(NOCHE, ana, List.of(new Peticion(general, 1)), mientrasSeVende(NOCHE));
         comoUnaPeticionNueva();
-        compra.abrir(NOCHE, ana, List.of(new Peticion(general, 1)), Instant.now());
+        compra.abrir(NOCHE, ana, List.of(new Peticion(general, 1)), mientrasSeVende(NOCHE));
         comoUnaPeticionNueva();
 
         long cuantos = jdbc.queryForObject(
@@ -305,7 +332,7 @@ class CompraTest {
     void pagarEmiteEntradasValidas() {
         String general = idDeTipo(NOCHE, "General");
         var abierto = compra.abrir(
-                NOCHE, alguienNuevo(), List.of(new Peticion(general, 2)), Instant.now());
+                NOCHE, alguienNuevo(), List.of(new Peticion(general, 2)), mientrasSeVende(NOCHE));
         comoUnaPeticionNueva();
 
         var hecho = compra.confirmarPago(abierto.codigo(), MetodoDePago.TARJETA, Instant.now());
@@ -335,7 +362,7 @@ class CompraTest {
     void pagarDosVeces() {
         String general = idDeTipo(NOCHE, "General");
         var abierto = compra.abrir(
-                NOCHE, alguienNuevo(), List.of(new Peticion(general, 2)), Instant.now());
+                NOCHE, alguienNuevo(), List.of(new Peticion(general, 2)), mientrasSeVende(NOCHE));
         comoUnaPeticionNueva();
 
         compra.confirmarPago(abierto.codigo(), MetodoDePago.TARJETA, Instant.now());
@@ -354,7 +381,7 @@ class CompraTest {
         String general = idDeTipo(NOCHE, "General");
         Comprador ana = alguienNuevo();
 
-        var abierto = compra.abrir(NOCHE, ana, List.of(new Peticion(general, 2)), Instant.now());
+        var abierto = compra.abrir(NOCHE, ana, List.of(new Peticion(general, 2)), mientrasSeVende(NOCHE));
         comoUnaPeticionNueva();
 
         var antes = clientes.findByEmailIgnoreCase(ana.email()).orElseThrow();

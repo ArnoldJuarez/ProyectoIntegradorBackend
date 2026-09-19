@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
+import pe.ssiomama.backend.NocheDePrueba;
 
 /**
  * Comprar desde fuera: sin cuenta, por HTTP, como lo hace el navegador.
@@ -29,7 +32,15 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class CompraHttpTest {
 
-    private static final String NOCHE = "sabado-de-show";
+    /**
+     * La noche contra la que se compra, creada por esta prueba.
+     *
+     * <p>No se usa una del seed. La venta de un tipo de entrada se corta al
+     * empezar la noche, así que atarse a una fecha fija le pone caducidad a la
+     * prueba. Esta va por HTTP y no puede controlar el reloj como hace
+     * {@code CompraTest}, así que se fabrica su propia noche futura.
+     */
+    private static String NOCHE;
     private static final String MARCA = "compra-http-%d@ejemplo.test";
 
     @Autowired
@@ -39,6 +50,21 @@ class CompraHttpTest {
     private JdbcTemplate jdbc;
 
     private final ObjectMapper json = new ObjectMapper();
+
+    @BeforeAll
+    static void crearLaNoche(@Autowired JdbcTemplate jdbc) {
+        // Por si una ejecución anterior se cortó a mitad.
+        NocheDePrueba.limpiar(jdbc);
+        String eventoId = NocheDePrueba.crear(jdbc, "Noche de prueba · compra por HTTP");
+        NocheDePrueba.anadirTipoDeEntrada(jdbc, eventoId, "General", 1800, 400);
+        NocheDePrueba.anadirTipoDeEntrada(jdbc, eventoId, "VIP", 3500, 60);
+        NOCHE = NocheDePrueba.slugDe(jdbc, eventoId);
+    }
+
+    @AfterAll
+    static void borrarLaNoche(@Autowired JdbcTemplate jdbc) {
+        NocheDePrueba.limpiar(jdbc);
+    }
 
     @AfterEach
     void limpiar() {

@@ -2,6 +2,7 @@ package pe.ssiomama.backend.entradas;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -68,6 +69,16 @@ class CompraConcurrenteTest {
     private JdbcTemplate jdbc;
 
     private String tipoId;
+
+    /**
+     * Un instante en el que esa noche todavía se vende.
+     *
+     * <p>Se lee del propio evento en vez de usar la hora real: el servicio
+     * recibe el instante como parámetro, y atarse al reloj del sistema le ponía
+     * fecha de caducidad a esta prueba — cuando el calendario pasó la noche, la
+     * venta se cerró sola y las veinte compras se rechazaban por eso.
+     */
+    private Instant mientrasSeVende;
     private int cantidadOriginal;
     private int vendidasAlEmpezar;
 
@@ -82,6 +93,22 @@ class CompraConcurrenteTest {
                 String.class,
                 NOCHE,
                 TIPO);
+
+        /*
+         * Se lee como texto y se marca como UTC a mano.
+         *
+         * Un `Timestamp` de JDBC sobre una columna «sin zona» se interpreta en
+         * la zona de la JVM, que aquí es Lima: el instante saldría cinco horas
+         * corrido y podría caer fuera de la ventana de venta.
+         */
+        String empieza = jdbc.queryForObject(
+                """
+                select to_char("empiezaEn", 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+                from "Evento" where slug = ?
+                """,
+                String.class,
+                NOCHE);
+        mientrasSeVende = Instant.parse(empieza).minus(Duration.ofHours(1));
 
         cantidadOriginal = jdbc.queryForObject(
                 "select cantidad from \"TipoEntrada\" where id = ?", Integer.class, tipoId);
@@ -164,7 +191,7 @@ class CompraConcurrenteTest {
                                     new Comprador("Comprador", String.valueOf(i),
                                             MARCA.formatted(i), "999000" + i),
                                     List.of(new Peticion(tipoId, 1)),
-                                    Instant.now()));
+                                    mientrasSeVende));
                             compradas.incrementAndGet();
                         } catch (CompraRechazada agotado) {
                             rechazadas.incrementAndGet();
