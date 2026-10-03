@@ -102,4 +102,23 @@ public interface EventoRepository extends JpaRepository<Evento, String> {
 
     /** ¿Está cogido ese slug? Lo usa el generador para no repetir direcciones. */
     boolean existsBySlug(String slug);
+
+    /**
+     * La última noche que ya se celebró.
+     *
+     * <p>Sirve para comparar: la portada enseña la próxima al lado de la
+     * anterior, y una cifra sola no dice si va bien o mal.
+     *
+     * <p>No filtra por estado. Una noche que se canceló también «pasó», pero lo
+     * que se busca aquí es la última de la que hay datos reales, y el estado se
+     * enseña para que quien mira lo sepa.
+     */
+    @Query("""
+            select e from Evento e
+            join fetch e.sala
+            where e.terminaA < :ahora
+            order by e.empiezaA desc
+            limit 1
+            """)
+    Optional<Evento> buscarUltimaCelebrada(@Param("ahora") Instant ahora);
 }

@@ -71,4 +71,14 @@ public interface ArqueoRepository extends JpaRepository<ArqueoDeCaja, String> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select a from ArqueoDeCaja a where a.id = :id")
     Optional<ArqueoDeCaja> bloquear(@Param("id") String id);
+
+    /**
+     * Cuántas cajas siguen abiertas.
+     *
+     * <p>Es una de las cuatro cifras de la portada del panel. Una caja sin
+     * cerrar al día siguiente no es un detalle: significa que nadie contó el
+     * dinero de esa noche, y cuanto más tarde en revisarse menos se acuerda
+     * quien la llevaba.
+     */
+    long countByCerradaEnIsNull();
 }

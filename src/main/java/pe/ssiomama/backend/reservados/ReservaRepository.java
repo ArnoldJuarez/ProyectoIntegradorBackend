@@ -21,4 +21,20 @@ public interface ReservaRepository extends JpaRepository<Reserva, String> {
             """)
     List<String> idsDeMesasPedidas(
             @Param("slug") String slug, @Param("cancelada") EstadoDeReserva cancelada);
+
+    /**
+     * Las reservas de una noche, con su mesa y su cliente cargados.
+     *
+     * <p>Las confirmadas primero: son las que ocupan sitio de verdad. Las
+     * solicitudes pendientes van después porque todavía no apartan nada —
+     * alguien tiene que llamar para confirmarlas.
+     */
+    @Query("""
+            select r from Reserva r
+            join fetch r.mesa
+            join fetch r.cliente
+            where r.evento.id = :eventoId
+            order by r.estado asc, r.creadaEn asc
+            """)
+    List<Reserva> buscarDeLaNoche(@Param("eventoId") String eventoId);
 }

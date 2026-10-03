@@ -168,7 +168,13 @@ public class SecurityConfig {
                                 "/api/eventos/**",
                                 "/api/clientes/**",
                                 "/api/caja/**",
-                                "/api/pedidos/**")
+                                "/api/pedidos/**",
+                                /*
+                                 * El panel: la portada y la torre de control.
+                                 * No es un dominio propio —cruza cinco— pero lo
+                                 * ve la misma gente, así que comparte permiso.
+                                 */
+                                "/api/panel/**")
                         .hasAnyAuthority(autoridades(Rol.PANEL))
 
 

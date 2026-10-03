@@ -1,6 +1,7 @@
 package pe.ssiomama.backend.entradas;
 
 import jakarta.persistence.LockModeType;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
@@ -57,4 +58,42 @@ public interface PedidoRepository extends JpaRepository<Pedido, String> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from Pedido p where p.codigo = :codigo")
     Optional<Pedido> bloquearParaCobrar(@Param("codigo") String codigo);
+
+    /**
+     * Lo facturado por entradas desde una fecha, y en cuántos pedidos.
+     *
+     * <p>Solo cuenta lo pagado: un pendiente aparta cupo pero todavía no es
+     * dinero, y sumarlo haría que los ingresos del panel bajaran solos cada vez
+     * que alguien abandona una compra.
+     *
+     * <p>Devuelve dos cifras en una sola consulta porque siempre se enseñan
+     * juntas: «S/ 612 en 70 pedidos» dice mucho más que cualquiera de las dos
+     * por separado.
+     *
+     * <p>La proyección no es decoración: con {@code Object[]} como tipo de
+     * retorno, Spring Data devuelve un array cuyo único elemento es a su vez el
+     * array de columnas, y el cast a número revienta en tiempo de ejecución con
+     * un mensaje que no menciona la consulta.
+     */
+    interface Facturado {
+        long getTotal();
+
+        long getPedidos();
+    }
+
+    @Query("""
+            select coalesce(sum(p.totalCentimos), 0) as total, count(p) as pedidos
+            from Pedido p
+            where p.estado = :pagado and p.pagadoEn >= :desde
+            """)
+    Facturado facturadoDesde(
+            @Param("pagado") EstadoDePedido pagado, @Param("desde") Instant desde);
+
+    /** Lo facturado por entradas de una noche concreta. */
+    @Query("""
+            select coalesce(sum(p.totalCentimos), 0)
+            from Pedido p
+            where p.evento.id = :eventoId and p.estado = :pagado
+            """)
+    long taquillaDe(@Param("eventoId") String eventoId, @Param("pagado") EstadoDePedido pagado);
 }

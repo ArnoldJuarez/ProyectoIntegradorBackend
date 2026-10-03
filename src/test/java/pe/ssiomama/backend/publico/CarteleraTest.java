@@ -3,6 +3,8 @@ package pe.ssiomama.backend.publico;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +12,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
+import pe.ssiomama.backend.NocheDePrueba;
 import pe.ssiomama.backend.eventos.EstadoDeEvento;
 import pe.ssiomama.backend.eventos.Evento;
 import pe.ssiomama.backend.eventos.EventoRepository;
@@ -29,6 +33,29 @@ class CarteleraTest {
 
     @Autowired
     private EventoRepository eventos;
+
+    @Autowired
+    private JdbcTemplate jdbc;
+
+    /**
+     * La agenda solo enseña noches por venir, así que la prueba se trae la suya.
+     *
+     * <p>Sin esto la suite caduca: las noches del seed tienen fecha fija y el día
+     * que el calendario las pasa, la agenda se queda vacía con razón y estas
+     * comprobaciones fallan acusando al código de no devolver nada. Ya ocurrió
+     * —el 3 de octubre, con la última noche publicada el 27 de septiembre— y el
+     * código estaba bien.
+     */
+    @BeforeEach
+    void programarUnaNoche() {
+        String id = NocheDePrueba.crear(jdbc, "Noche de prueba de cartelera");
+        NocheDePrueba.anadirTipoDeEntrada(jdbc, id, "General", 2500, 100);
+    }
+
+    @AfterEach
+    void limpiar() {
+        NocheDePrueba.limpiar(jdbc);
+    }
 
     @Test
     @DisplayName("la agenda se lee sin haber iniciado sesion")

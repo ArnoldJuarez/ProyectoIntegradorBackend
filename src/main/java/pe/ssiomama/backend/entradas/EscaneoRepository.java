@@ -33,16 +33,41 @@ public interface EscaneoRepository extends JpaRepository<Escaneo, String> {
     /**
      * Cuántos han entrado por cada puerta.
      *
-     * <p>Devuelve el nombre y el recuento. Es lo que dice si la cola está
-     * repartida o si todo el mundo se amontona en un solo acceso.
+     * <p>Es lo que dice si la cola está repartida o si todo el mundo se
+     * amontona en un solo acceso teniendo otro libre al lado.
+     *
+     * <p>Tres columnas por fila: nombre, cuántos pasaron y el caudal por minuto
+     * que admite esa puerta. El caudal va aquí para poder comparar lo que entra
+     * con lo que la puerta aguanta; en los accesos sin puerta registrada sale a
+     * cero, que es lo que significa no saberlo.
      */
     @Query("""
-            select coalesce(p.nombre, 'Sin registrar'), count(e)
+            select coalesce(p.nombre, 'Sin registrar'), count(e),
+                   coalesce(p.caudalPorMinuto, 0)
             from Escaneo e
             left join e.puerta p
             where e.evento.id = :eventoId
-            group by p.nombre
+            group by p.nombre, p.caudalPorMinuto
             order by count(e) desc
             """)
     List<Object[]> contarPorPuerta(@Param("eventoId") String eventoId);
+
+    /**
+     * A qué hora fue entrando la gente.
+     *
+     * <p>Devuelve los instantes de cada acceso, sin agrupar. El reparto en
+     * tramos se hace en Java y no con {@code date_trunc} por una razón: el
+     * tamaño del tramo es una decisión de presentación —quince minutos se lee
+     * bien en una noche, una hora no— y bajarla a la consulta la deja escrita en
+     * SQL, donde cambiarla obliga a tocar la base.
+     *
+     * <p>Son unos cientos de filas por noche: traerlas sale más barato que una
+     * consulta por tramo.
+     */
+    @Query("""
+            select e.escaneadoEn from Escaneo e
+            where e.evento.id = :eventoId
+            order by e.escaneadoEn asc
+            """)
+    List<java.time.Instant> horasDeEntrada(@Param("eventoId") String eventoId);
 }

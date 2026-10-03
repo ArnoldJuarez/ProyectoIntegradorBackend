@@ -33,4 +33,26 @@ public interface VentaDeBarraRepository extends JpaRepository<VentaDeBarra, Stri
             group by v.metodoDePago
             """)
     List<Object[]> sumarPorMetodoDePago(@Param("idArqueo") String idArqueo);
+
+    /**
+     * Lo cobrado en barra durante una noche.
+     *
+     * <p>Cuelga del evento y no del turno de caja: una misma noche puede llevar
+     * varias cajas —dos barras, o un relevo a media noche— y lo que interesa
+     * aquí es lo que facturó la noche entera.
+     */
+    @Query("""
+            select coalesce(sum(v.totalCentimos), 0)
+            from VentaDeBarra v
+            where v.evento.id = :eventoId
+            """)
+    long facturadoEnLaNoche(@Param("eventoId") String eventoId);
+
+    /** Cuántas consumiciones se sirvieron esa noche. */
+    @Query("""
+            select coalesce(sum(l.cantidad), 0)
+            from LineaDeVenta l
+            where l.venta.evento.id = :eventoId
+            """)
+    long consumicionesDeLaNoche(@Param("eventoId") String eventoId);
 }
