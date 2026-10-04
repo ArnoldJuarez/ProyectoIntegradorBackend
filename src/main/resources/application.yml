@@ -23,6 +23,13 @@ spring:
     # Ponla en la variable de entorno DB_PASSWORD o en application-local.yml.
     password: ${DB_PASSWORD}
 
+  servlet:
+    multipart:
+      # El limite por defecto es 1 MB, y un flyer de disenador pesa cuatro. Lo
+      # que se guarda pesa mucho menos: se reescala al subir.
+      max-file-size: 12MB
+      max-request-size: 13MB
+
   flyway:
     enabled: true
     # La base ya existe con sus 43 tablas y con datos dentro. Sin esto, Flyway
@@ -97,6 +104,26 @@ ssiomama:
   cookie-segura: ${COOKIE_SEGURA:false}
   # De donde se aceptan peticiones del navegador. El React de Vite vive en 5173.
   cors-origins: ${CORS_ORIGINS:http://localhost:5173}
+  # Donde se guardan los flyers subidos desde el panel. Fuera del codigo y fuera
+  # de git: son datos, no fuentes.
+  carpeta-portadas: ${CARPETA_PORTADAS:portadas}
+
+  # La capa de IA. Habla el formato compatible con OpenAI, asi que sirve igual
+  # Ollama en local que Groq, Gemini u OpenRouter: se cambia con variables, sin
+  # tocar codigo. Las claves NO van aqui: en application-local.yml o en el
+  # entorno.
+  ia:
+    base-url: ${AI_BASE_URL:http://localhost:11434/v1}
+    modelo: ${AI_MODEL:qwen2.5:7b}
+    api-key: ${AI_API_KEY:local}
+    # El conserje y los textos que lee una persona pueden ir a otro motor. Si
+    # no se configura, usan el mismo.
+    chat-base-url: ${CHAT_BASE_URL:${ssiomama.ia.base-url}}
+    chat-modelo: ${CHAT_MODEL:${ssiomama.ia.modelo}}
+    chat-api-key: ${CHAT_API_KEY:${ssiomama.ia.api-key}}
+    # Centimos por millon de tokens. En local y en capas gratuitas, 0.
+    precio-entrada: ${AI_PRICE_INPUT:0}
+    precio-salida: ${AI_PRICE_OUTPUT:0}
 
 logging:
   level:

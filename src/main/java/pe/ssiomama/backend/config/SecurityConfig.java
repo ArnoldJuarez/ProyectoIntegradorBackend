@@ -150,6 +150,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/publico/pedidos").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/publico/pedidos/*/pagar").permitAll()
 
+                        // El chat del conserje: preguntar no exige cuenta. No
+                        // escribe nada de negocio, solo la conversación.
+                        .requestMatchers(HttpMethod.POST, "/api/publico/chat").permitAll()
+
                         // Publicas: entrar y salir.
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/logout").permitAll()
@@ -169,6 +173,16 @@ public class SecurityConfig {
                                 "/api/clientes/**",
                                 "/api/caja/**",
                                 "/api/pedidos/**",
+                                // Lo que se le paga a cada promotor.
+                                "/api/promotores/**",
+                                // El plano del local y su evacuación.
+                                "/api/local/**",
+                                /*
+                                 * Los agentes de IA y sus propuestas. Aprobar
+                                 * una puede crear un pedido o cambiar un precio,
+                                 * así que es cosa de dirección y gerencia.
+                                 */
+                                "/api/ia/**",
                                 /*
                                  * El panel: la portada y la torre de control.
                                  * No es un dominio propio —cruza cinco— pero lo

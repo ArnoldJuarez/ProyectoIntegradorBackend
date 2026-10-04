@@ -2,8 +2,12 @@ package pe.ssiomama.backend.reservados;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * Zona física del local: pista, barra, reservados, terraza — tabla
@@ -35,6 +39,38 @@ public class Zona {
     @Column(name = "orden", nullable = false)
     private int orden;
 
+    // ── El plano del local ────────────────────────────────────────
+
+    /** Solo lectura: las zonas no cambian de sala desde la aplicación. */
+    @Column(name = "salaId", nullable = false, insertable = false, updatable = false)
+    private String salaId;
+
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(name = "tipo", nullable = false)
+    private TipoDeZona tipo;
+
+    /** Rectángulo en metros, con el origen en la esquina del plano. */
+    @Column(name = "x", nullable = false)
+    private double x;
+
+    @Column(name = "y", nullable = false)
+    private double y;
+
+    @Column(name = "ancho", nullable = false)
+    private double ancho;
+
+    @Column(name = "fondo", nullable = false)
+    private double fondo;
+
+    /** Altura libre. Solo la usa la vista 3D. */
+    @Column(name = "alto", nullable = false)
+    private double alto;
+
+    /** Tono HSL en el plano y en 3D. -1 = derivarlo del tipo. */
+    @Column(name = "tono", nullable = false)
+    private int tono;
+
     protected Zona() {
         // Hibernate necesita un constructor sin argumentos.
     }
@@ -53,5 +89,49 @@ public class Zona {
 
     public int getOrden() {
         return orden;
+    }
+
+    public String getSalaId() {
+        return salaId;
+    }
+
+    public TipoDeZona getTipo() {
+        return tipo;
+    }
+
+    public double getX() {
+        return x;
+    }
+
+    public double getY() {
+        return y;
+    }
+
+    public double getAncho() {
+        return ancho;
+    }
+
+    public double getFondo() {
+        return fondo;
+    }
+
+    public double getAlto() {
+        return alto;
+    }
+
+    public int getTono() {
+        return tono;
+    }
+
+    /** Cambia dónde está y qué es. El nombre y el orden no se tocan desde el plano. */
+    public void dibujar(
+            TipoDeZona tipo, double x, double y, double ancho, double fondo, double alto, int aforo) {
+        this.tipo = tipo;
+        this.x = x;
+        this.y = y;
+        this.ancho = ancho;
+        this.fondo = fondo;
+        this.alto = alto;
+        this.aforo = aforo;
     }
 }

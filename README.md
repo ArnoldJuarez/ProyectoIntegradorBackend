@@ -1,12 +1,14 @@
 # Ssiomama — backend
 
-API REST en Java con Spring Boot. Sirve la web pública (cartelera, boletín,
-reservados) y el panel interno (eventos, clientes, inventario).
+API REST en Java con Spring Boot. Sirve la web pública (cartelera, compra de
+entradas, boxes, boletín y el chat del conserje), el panel interno (eventos,
+pedidos, clientes, CRM, promotores, caja, inventario, el plano del local y los
+agentes de IA) y las dos pantallas de turno (puerta y barra).
 
 El frontend que la consume vive en **otro repositorio**: `ssiomama-frontend`.
 
 ```
-Spring Boot 3.5.3 · Java 21 · PostgreSQL 18 · Flyway · 84 tests
+Spring Boot 3.5.3 · Java 21 · PostgreSQL 18 · Flyway · 317 tests
 ```
 
 ## Qué hace falta instalado
@@ -48,6 +50,27 @@ ssiomama:
 
 Sin ese archivo el backend falla al arrancar y dice cuál falta. Mejor eso que
 arrancar con un valor por defecto equivocado.
+
+### La IA (opcional)
+
+Los agentes y el conserje del chat hablan el formato compatible con OpenAI, así
+que sirven igual Ollama en local que Groq, Gemini u OpenRouter. Sin configurar
+nada apuntan a Ollama en `localhost:11434`; si no está arrancado, el chat
+contesta con el teléfono del local y el panel dice qué falta.
+
+Para usar el mismo proveedor que el proyecto anterior, añade a
+`application-local.yml` (los valores están en su `.env`):
+
+```yaml
+ssiomama:
+  ia:
+    base-url: "https://api.groq.com/openai/v1"
+    modelo: "openai/gpt-oss-120b"
+    api-key: "la_AI_API_KEY_del_proyecto_anterior"
+```
+
+Lo mismo con variables de entorno: `AI_BASE_URL`, `AI_MODEL`, `AI_API_KEY`, y
+`CHAT_*` si el conserje debe ir a otro motor.
 
 ## Arrancar
 
@@ -104,7 +127,7 @@ congelado; si hay que tocarlo, que sea sin `db push`.
 ./mvnw test
 ```
 
-Son 84. Conviene saber qué protege cada grupo antes de tocarlos:
+Son 317. Conviene saber qué protege cada grupo antes de tocarlos:
 
 | Test | Qué protege |
 |---|---|
@@ -117,6 +140,8 @@ Son 84. Conviene saber qué protege cada grupo antes de tocarlos:
 | `BoletinTest` / `ReservadosTest` | Las escrituras públicas. Limpian lo que ensucian. |
 | `ClienteControllerTest` | Que los datos personales estén cerrados y no salga ningún hash. |
 | `ProductoRepositoryTest` | Que las entidades JPA cuadren con el esquema real. |
+| `EsquemaJsonTest` | Que una respuesta mal formada de la IA no pase como propuesta válida. |
+| `ModeloDeDemandaTest` | Que la regresión del agente de inventario recupere efectos conocidos. |
 
 > **Los tests escriben en `discoteca`, la base de verdad.** Los que crean filas
 > usan correos bajo `@ejemplo.test` —dominio reservado por la RFC 2606— con un
@@ -148,12 +173,22 @@ se llama `EventStatus`. Los valores van siempre como parámetro.
 
 ## Estado
 
-Es una reescritura del sistema anterior y va por el principio: **13 de 43
-modelos, 14 de ~43 endpoints**.
+**Migrado entero** desde el sistema en Next.js. Lo último en llegar:
 
-Hecho: autenticación con roles, eventos, cartel, clientes, inventario
-(productos), cartelera pública, boletín y reservados.
+- **Promotores** (`/api/promotores`): listas de invitados y comisión calculada.
+- **Flyer de la noche** (`/api/eventos/{slug}/portada`): se sube, se reescala y
+  lo sirve el propio backend en `/api/publico/portadas/...`. Se guarda en la
+  carpeta `portadas/` (fuera de git; se cambia con `CARPETA_PORTADAS`).
+- **El local** (`/api/local`): medidas, zonas y puertas de cada sala. La
+  evacuación se calcula en el navegador.
+- **IA** (`/api/ia/**` y `/api/publico/chat`): seis agentes que dejan
+  propuestas, la aprobación humana que las aplica, métricas y el conserje.
+  Ningún agente toca datos sin que alguien pulse «Aprobar».
 
-Pendiente: stock y movimientos, caja y barra, compra de entradas y validación en
-puerta —**lo último**, por ser lo transaccional—, la capa de agentes de IA y el
-local en 3D.
+Las tablas de la IA se escriben con SQL a mano (`RegistroDeIa`) y no con JPA:
+sus enum tienen etiquetas con guiones (`crm-segmenter`) que Hibernate no sabe
+convertir. Está explicado en la propia clase.
+
+**No se migraron** los scripts de línea de comandos del proyecto anterior
+(`npm run benchmark`, `historico`, `proyeccion`, `consumo`, `evacuacion`...):
+eran herramientas de la tesis, no parte de la aplicación.

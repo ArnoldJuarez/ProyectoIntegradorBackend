@@ -12,6 +12,9 @@ application-local.properties
 .env
 .env.local
 
+# ── Flyers subidos desde el panel (datos, no codigo) ─────────
+portadas/
+
 # ── Maven ─────────────────────────────────────────────────────
 HELP.md
 target/

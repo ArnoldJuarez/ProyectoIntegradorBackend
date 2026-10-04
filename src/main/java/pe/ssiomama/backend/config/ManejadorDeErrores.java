@@ -10,6 +10,9 @@ import pe.ssiomama.backend.caja.CajaRechazada;
 import pe.ssiomama.backend.clientes.CrmRechazado;
 import pe.ssiomama.backend.entradas.CompraRechazada;
 import pe.ssiomama.backend.eventos.EventoRechazado;
+import pe.ssiomama.backend.ia.AgenteSinDatos;
+import pe.ssiomama.backend.ia.IaNoDisponible;
+import pe.ssiomama.backend.ia.IaSinFormato;
 import pe.ssiomama.backend.inventario.AlmacenRechazado;
 
 /**
@@ -118,5 +121,28 @@ public class ManejadorDeErrores {
     @ExceptionHandler(CrmRechazado.class)
     public ResponseEntity<Problema> deCrm(CrmRechazado e) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new Problema(e.getMessage()));
+    }
+
+    /** Un agente sin nada sobre lo que trabajar: no hay noches publicadas, no hay histórico. */
+    @ExceptionHandler(AgenteSinDatos.class)
+    public ResponseEntity<Problema> deAgenteSinDatos(AgenteSinDatos e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new Problema(e.getMessage()));
+    }
+
+    /**
+     * El proveedor de IA no contesta o rechaza la clave.
+     *
+     * <p>503 y no 500: no es un fallo de este servidor sino de uno del que
+     * depende, y el mensaje dice qué mirar.
+     */
+    @ExceptionHandler(IaNoDisponible.class)
+    public ResponseEntity<Problema> deIaNoDisponible(IaNoDisponible e) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new Problema(e.getMessage()));
+    }
+
+    /** El modelo no dio un JSON válido en tres intentos. */
+    @ExceptionHandler(IaSinFormato.class)
+    public ResponseEntity<Problema> deIaSinFormato(IaSinFormato e) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(new Problema(e.getMessage()));
     }
 }

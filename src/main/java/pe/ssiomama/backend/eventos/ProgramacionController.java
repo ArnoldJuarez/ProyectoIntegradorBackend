@@ -27,14 +27,8 @@ import org.springframework.web.bind.annotation.RestController;
  * panel, porque es la misma sección vista por la misma gente. Lo que cambia es
  * el verbo: {@code GET} lee, y estos escriben.
  *
- * <h2>Lo que se decidió no migrar todavía</h2>
- *
- * <p>La <b>subida de la imagen de portada</b>. En el sistema anterior era un
- * formulario multiparte que optimizaba la imagen y la escribía en disco, y eso
- * es un problema aparte —almacenamiento de archivos— que no tiene nada que ver
- * con programar una noche. Aquí la portada es una dirección de imagen, que es lo
- * que era antes de aquella pantalla y sigue funcionando igual de cara al
- * público.
+ * <p>La subida del flyer va aparte, en {@link PortadaController}: es
+ * almacenamiento de archivos, no programación.
  */
 @RestController
 @RequestMapping("/api/eventos")

@@ -215,7 +215,7 @@ public class Evento {
         }
     }
 
-    /** La imagen del cartel. Hoy es una dirección; la subida de archivos no está migrada. */
+    /** La imagen del cartel: una dirección pegada a mano o un flyer subido (ver PortadaController). */
     void cambiarPortada(String url) {
         this.portada = vacioANulo(url);
     }

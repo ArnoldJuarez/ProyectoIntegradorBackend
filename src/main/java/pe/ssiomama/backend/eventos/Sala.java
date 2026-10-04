@@ -8,10 +8,8 @@ import jakarta.persistence.Table;
 /**
  * Sala donde se celebra la noche — tabla {@code "Sala"}.
  *
- * <p>De momento solo lo que necesita el listado de eventos. Las medidas del
- * plano ({@code planoAncho}, {@code planoFondo}) y las zonas llegarán con la
- * pantalla del local; mapear columnas que nadie lee solo añade sitios donde
- * equivocarse.
+ * <p>Las medidas del plano ({@code planoAncho}, {@code planoFondo}) son las de
+ * la pantalla del local. 0 = todavía no se ha dibujado.
  */
 @Entity
 @Table(name = "Sala")
@@ -27,6 +25,16 @@ public class Sala {
     @Column(name = "aforo", nullable = false)
     private int aforo;
 
+    @Column(name = "descripcion")
+    private String descripcion;
+
+    /** Medidas del local en metros. */
+    @Column(name = "planoAncho", nullable = false)
+    private double planoAncho;
+
+    @Column(name = "planoFondo", nullable = false)
+    private double planoFondo;
+
     protected Sala() {
         // Hibernate necesita un constructor sin argumentos.
     }
@@ -41,5 +49,22 @@ public class Sala {
 
     public int getAforo() {
         return aforo;
+    }
+
+    public String getDescripcion() {
+        return descripcion;
+    }
+
+    public double getPlanoAncho() {
+        return planoAncho;
+    }
+
+    public double getPlanoFondo() {
+        return planoFondo;
+    }
+
+    public void medir(double ancho, double fondo) {
+        this.planoAncho = ancho;
+        this.planoFondo = fondo;
     }
 }

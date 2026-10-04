@@ -21,9 +21,8 @@ import jakarta.persistence.Table;
  * ellas</b>: son de salida. De ahí {@link #esSalidaEmergencia}, que el buscador
  * de la puerta de entrada usa para descartarlas.
  *
- * <p>La geometría del plano ({@code x}, {@code y}, {@code ancho}) está en la
- * tabla y aquí no: la pantalla del local todavía no está migrada, y mapear
- * columnas que nadie lee solo añade sitios donde equivocarse.
+ * <p>La geometría ({@code x}, {@code y}, {@code ancho}) es la del plano del
+ * local, y con el caudal alimenta la simulación de evacuación.
  */
 @Entity
 @Table(name = "Puerta")
@@ -57,6 +56,17 @@ public class Puerta {
     @Column(name = "activo", nullable = false)
     private boolean activo;
 
+    /** Posición sobre el plano, en metros. */
+    @Column(name = "x", nullable = false)
+    private double x;
+
+    @Column(name = "y", nullable = false)
+    private double y;
+
+    /** Ancho del hueco en metros: manda en cuánta gente pasa a la vez. */
+    @Column(name = "ancho", nullable = false)
+    private double ancho;
+
     protected Puerta() {
         // Hibernate necesita un constructor sin argumentos.
     }
@@ -83,6 +93,28 @@ public class Puerta {
 
     public boolean isActivo() {
         return activo;
+    }
+
+    public double getX() {
+        return x;
+    }
+
+    public double getY() {
+        return y;
+    }
+
+    public double getAncho() {
+        return ancho;
+    }
+
+    /** Cambia su sitio en el plano, su caudal y si es de evacuación. */
+    public void dibujar(
+            double x, double y, double ancho, int caudalPorMinuto, boolean esSalidaEmergencia) {
+        this.x = x;
+        this.y = y;
+        this.ancho = ancho;
+        this.caudalPorMinuto = caudalPorMinuto;
+        this.esSalidaEmergencia = esSalidaEmergencia;
     }
 
     /** ¿Se puede escanear por aquí? Solo las abiertas que no son de evacuación. */

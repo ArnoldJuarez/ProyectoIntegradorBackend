@@ -112,4 +112,28 @@ class PermisosServidorRealTest {
         assertThat(estadoDe("/api/lo-que-sea", new HttpHeaders()))
                 .isEqualTo(HttpStatus.UNAUTHORIZED);
     }
+
+    /**
+     * Las secciones migradas al final: promotores, el local y la IA. Son del
+     * panel —aprobar una propuesta de la IA puede cambiar un precio— y un
+     * portero no entra.
+     */
+    @Test
+    @DisplayName("promotores, local e IA: solo el panel")
+    void seccionesNuevasSoloPanel() {
+        HttpHeaders portero = sesionDe("puerta@ssiomama.test");
+        HttpHeaders direccion = sesionDe("admin@ssiomama.test");
+
+        for (String ruta : List.of("/api/promotores", "/api/local", "/api/ia/propuestas", "/api/ia/metricas")) {
+            assertThat(estadoDe(ruta, new HttpHeaders())).as(ruta).isEqualTo(HttpStatus.UNAUTHORIZED);
+            assertThat(estadoDe(ruta, portero)).as(ruta).isEqualTo(HttpStatus.FORBIDDEN);
+            assertThat(estadoDe(ruta, direccion)).as(ruta).isEqualTo(HttpStatus.OK);
+        }
+    }
+
+    @Test
+    @DisplayName("la portada publica no pide cuenta")
+    void portadaPublica() {
+        assertThat(estadoDe("/api/publico/portada", new HttpHeaders())).isEqualTo(HttpStatus.OK);
+    }
 }
