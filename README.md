@@ -51,26 +51,24 @@ ssiomama:
 Sin ese archivo el backend falla al arrancar y dice cuál falta. Mejor eso que
 arrancar con un valor por defecto equivocado.
 
-### La IA (opcional)
+### La IA
 
-Los agentes y el conserje del chat hablan el formato compatible con OpenAI, así
-que sirven igual Ollama en local que Groq, Gemini u OpenRouter. Sin configurar
-nada apuntan a Ollama en `localhost:11434`; si no está arrancado, el chat
-contesta con el teléfono del local y el panel dice qué falta.
-
-Para usar el mismo proveedor que el proyecto anterior, añade a
-`application-local.yml` (los valores están en su `.env`):
+Los agentes y el conserje del chat usan **Groq**, el mismo proveedor que el
+proyecto anterior, por su API compatible con OpenAI. Solo hace falta la clave,
+en `application-local.yml` (es la `AI_API_KEY` del `.env` del proyecto
+anterior):
 
 ```yaml
 ssiomama:
   ia:
-    base-url: "https://api.groq.com/openai/v1"
-    modelo: "openai/gpt-oss-120b"
     api-key: "la_AI_API_KEY_del_proyecto_anterior"
 ```
 
-Lo mismo con variables de entorno: `AI_BASE_URL`, `AI_MODEL`, `AI_API_KEY`, y
-`CHAT_*` si el conserje debe ir a otro motor.
+Sin clave el backend arranca igual, avisa en el log y la IA queda apagada: el
+chat contesta con el teléfono del local y el panel dice qué falta. Para cambiar
+de proveedor o de modelo (Gemini, OpenRouter) basta con `base-url` y `modelo`,
+o las variables `AI_BASE_URL`, `AI_MODEL`, `AI_API_KEY`, y `CHAT_*` si el
+conserje debe ir a otro motor.
 
 ## Arrancar
 
@@ -113,6 +111,33 @@ createdb -U postgres discoteca
 Flyway detecta que está vacía y ejecuta `V1` entero. Quedan las tablas pero
 **sin datos**: para poblarla, restaura el `backup.sql` del proyecto anterior con
 `pg_restore`.
+
+### Los datos de muestra
+
+Para que los agentes de IA tengan con qué trabajar, la base lleva cuatro meses
+de operación simulada (junio-octubre de 2026): 49 noches con las promos reales
+de la casa, unos 2 100 clientes, 6 300 pedidos, 15 000 entradas firmadas que
+validan en la puerta, 13 000 ventas de barra con su salida de stock, compras a
+proveedores, gastos, boxes, listas de promotor y campañas.
+
+Lo genera `datos/generar_datos.py` con las mismas reglas que el backend: los
+contadores denormalizados —`vendidas`, el esperado de caja, la ficha del
+cliente— cuadran con lo que los tests comprueban contra la base real. La
+semilla es fija, así que volver a generarlo da exactamente lo mismo.
+
+Se construye **encima de la base de antes**, que quedó guardada en
+`datos/respaldo-discoteca-2026-10-04.dump`. Aplicado dos veces duplicaría
+noches y ventas, así que si la base ya tiene los datos el generador se niega.
+Para regenerarlos desde cero:
+
+```bash
+pg_restore -U postgres -d discoteca --clean --if-exists datos/respaldo-discoteca-2026-10-04.dump
+python datos/generar_datos.py
+psql -U postgres -d discoteca -1 -v ON_ERROR_STOP=1 -f datos/poblar.sql
+```
+
+`poblar.sql` y el respaldo no van a git (el respaldo lleva datos de clientes
+reales); el generador sí.
 
 ### Aviso sobre el proyecto anterior
 

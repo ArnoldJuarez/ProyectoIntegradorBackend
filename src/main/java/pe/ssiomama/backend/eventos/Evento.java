@@ -319,13 +319,26 @@ public class Evento {
         return cartel;
     }
 
-    /** Lo que cuesta entrar: el tipo activo más barato, en céntimos. */
+    /**
+     * Lo que cuesta entrar: el tipo activo más barato que se paga, en céntimos.
+     *
+     * <p>Las listas gratuitas («lista mujeres») no cuentan: un «desde S/ 0» en
+     * la cartelera dice que la noche es gratis para todo el mundo, y no lo es.
+     * Que haya lista se dice aparte, con {@link #tieneListaGratis()}.
+     */
     public int getPrecioDesdeCentimos() {
         return tiposDeEntrada.stream()
                 .filter(TipoDeEntrada::isActivo)
                 .mapToInt(TipoDeEntrada::getPrecioCentimos)
+                .filter(precio -> precio > 0)
                 .min()
                 .orElse(0);
+    }
+
+    /** ¿Hay una lista de entrada gratuita a la venta? */
+    public boolean tieneListaGratis() {
+        return tiposDeEntrada.stream()
+                .anyMatch(t -> t.isActivo() && t.getPrecioCentimos() == 0 && t.getDisponibles() > 0);
     }
 
     /**

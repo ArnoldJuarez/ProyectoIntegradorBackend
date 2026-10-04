@@ -1,5 +1,7 @@
 package pe.ssiomama.backend.ia;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -8,12 +10,14 @@ import org.springframework.stereotype.Component;
  *
  * <p><b>Números</b> es el de los agentes de fondo: pedidos, precios. <b>Prosa</b>
  * es el del conserje y de todo lo que va a leer una persona. Medido en el
- * sistema anterior: un modelo de 7B en local acierta los números y el formato,
- * pero su español suena a traducción automática. Si no se configura el segundo,
- * cae en el primero.
+ * sistema anterior: un modelo pequeño acierta los números y el formato, pero su
+ * español suena a traducción automática, así que la prosa puede ir a otro. Si
+ * no se configura el segundo, cae en el primero.
  */
 @Component
 public class MotoresDeIa {
+
+    private static final Logger log = LoggerFactory.getLogger(MotoresDeIa.class);
 
     private final Motor numeros;
     private final Motor prosa;
@@ -33,6 +37,10 @@ public class MotoresDeIa {
         this.prosa = new Motor(chatBaseUrl, chatApiKey, chatModelo);
         this.precioEntrada = precioEntrada;
         this.precioSalida = precioSalida;
+        // Arranca igual: el resto del sistema no depende de la IA. Pero que se vea.
+        if (apiKey.isBlank() || chatApiKey.isBlank()) {
+            log.warn("La IA está apagada: falta ssiomama.ia.api-key en application-local.yml (o AI_API_KEY).");
+        }
     }
 
     public Motor numeros() {
@@ -46,9 +54,9 @@ public class MotoresDeIa {
     /**
      * Lo que cuesta una llamada, en céntimos.
      *
-     * <p>Los precios van en céntimos por millón de tokens. En local y en las
-     * capas gratuitas es cero, y el registro sigue sirviendo para saber cuánto
-     * trabajo costó cada respuesta.
+     * <p>Los precios van en céntimos por millón de tokens. En las capas
+     * gratuitas es cero, y el registro sigue sirviendo para saber cuánto trabajo
+     * costó cada respuesta.
      */
     public int costeCentimos(int tokensEntrada, int tokensSalida) {
         return (int) Math.round(tokensEntrada / 1_000_000.0 * precioEntrada

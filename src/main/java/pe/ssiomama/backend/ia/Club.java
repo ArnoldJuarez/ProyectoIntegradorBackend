@@ -18,8 +18,8 @@ final class Club {
     static final String NOMBRE = "Ssiomama";
     static final String CIUDAD = "Arequipa";
     static final String DIRECCION = "Av. Dolores 119, José Luis Bustamante y Rivero, Arequipa";
-    static final String TELEFONO = "+51 951 866 748";
-    static final String HORARIO = "Jueves, viernes, sábado y domingo, de 8:00 p. m. a 2:00 a. m.";
+    static final String TELEFONO = "+51 986 678 040";
+    static final String HORARIO = "Jueves, viernes, sábado y domingo, de 9:00 p. m. a 2:00 a. m.";
     static final int EDAD_MINIMA = 18;
 
     /** La hora de la sala. Sin esto, un servidor en otra zona daría las puertas cinco horas corridas. */

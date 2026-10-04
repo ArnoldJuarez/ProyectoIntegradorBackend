@@ -35,8 +35,8 @@ public class ClienteDeModelo {
      * Los proveedores que validan el esquema en su lado (Groq) devuelven un 400
      * en vez de la respuesta mal formada, y lo redactan de varias formas. Ese
      * rechazo cuenta como un intento más, igual que un fallo de validación
-     * local: si no, el modelo local tendría tres oportunidades y el de la nube
-     * una sola.
+     * aquí: si no, un proveedor que valida en su lado tendría una sola
+     * oportunidad y uno que no, tres.
      */
     private static final Pattern RECHAZO_POR_ESQUEMA = Pattern.compile(
             "(validate|generate|generated).{0,40}json|json.{0,40}(schema|invalid)"
@@ -180,12 +180,17 @@ public class ClienteDeModelo {
     }
 
     private JsonNode llamarCrudo(Motor motor, ObjectNode cuerpo) {
+        // Sin clave no se llama: el proveedor contestaría 401 y el mensaje
+        // hablaría de una clave «no válida» cuando lo que pasa es que no hay.
+        if (motor.apiKey() == null || motor.apiKey().isBlank()) {
+            throw new IaNoDisponible("La IA no está configurada: falta la clave del proveedor "
+                    + "(ssiomama.ia.api-key en application-local.yml, o la variable AI_API_KEY).");
+        }
         String base = motor.baseUrl().endsWith("/") ? motor.baseUrl() : motor.baseUrl() + "/";
         return http.post()
                 .uri(base + "chat/completions")
                 .contentType(MediaType.APPLICATION_JSON)
-                // Ollama no valida la clave, pero la cabecera tiene que ir.
-                .header("Authorization", "Bearer " + (motor.apiKey().isBlank() ? "local" : motor.apiKey()))
+                .header("Authorization", "Bearer " + motor.apiKey())
                 .body(cuerpo)
                 .retrieve()
                 .body(JsonNode.class);
@@ -194,8 +199,8 @@ public class ClienteDeModelo {
     /** Convierte un fallo de conexión en algo que se entiende en el panel. */
     private static RuntimeException traducir(RuntimeException e, Motor motor) {
         if (e instanceof ResourceAccessException) {
-            return new IaNoDisponible("No hay nadie escuchando en " + motor.baseUrl()
-                    + ". Si usas Ollama, arráncalo con \"ollama serve\".");
+            return new IaNoDisponible("No se pudo conectar con " + motor.baseUrl()
+                    + ". Revisa la conexión a internet y la URL del proveedor.");
         }
         if (e instanceof RestClientResponseException r) {
             int estado = r.getStatusCode().value();
@@ -204,7 +209,7 @@ public class ClienteDeModelo {
             }
             if (estado == 404) {
                 return new IaNoDisponible("El modelo " + motor.modelo() + " no existe en " + motor.baseUrl()
-                        + ". Si usas Ollama, descárgalo con \"ollama pull <modelo>\".");
+                        + ". Revisa ssiomama.ia.modelo.");
             }
             if (estado == 429) {
                 return new IaNoDisponible("El proveedor ha cortado por límite de peticiones. Prueba en un minuto.");

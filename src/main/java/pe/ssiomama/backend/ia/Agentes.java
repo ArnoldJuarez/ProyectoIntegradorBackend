@@ -29,8 +29,8 @@ import org.springframework.stereotype.Service;
 public class Agentes {
 
     /**
-     * Corto y en imperativo. Medido con qwen2.5:7b: una regla dentro de una frase
-     * subordinada se ignora; en su propia línea se cumple.
+     * Corto y en imperativo. Medido en el sistema anterior: una regla dentro de
+     * una frase subordinada se ignora; en su propia línea se cumple.
      */
     private static final String ESTILO_DE_LA_CASA = """
             Eres del equipo de %s, una discoteca de %s.

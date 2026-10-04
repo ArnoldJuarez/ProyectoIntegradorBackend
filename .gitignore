@@ -15,6 +15,12 @@ application-local.properties
 # ── Flyers subidos desde el panel (datos, no codigo) ─────────
 portadas/
 
+# ── Datos de muestra ──────────────────────────────────────────
+# El generador sí va a git; lo que produce no: poblar.sql pesa 21 MB y se
+# regenera igual, y el respaldo lleva datos personales de clientes reales.
+datos/poblar.sql
+datos/*.dump
+
 # ── Maven ─────────────────────────────────────────────────────
 HELP.md
 target/

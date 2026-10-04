@@ -70,6 +70,7 @@ public class CarteleraController {
             int edadMinima,
             String vestimenta,
             int precioDesdeCentimos,
+            boolean conListaGratis,
             int porcentajeVendido,
             List<ArtistaEnCartel> cartel) {
 
@@ -86,6 +87,7 @@ public class CarteleraController {
                     e.getEdadMinima(),
                     e.getVestimenta(),
                     e.getPrecioDesdeCentimos(),
+                    e.tieneListaGratis(),
                     e.getPorcentajeVendido(),
                     e.getCartel().stream().map(ArtistaEnCartel::de).toList());
         }

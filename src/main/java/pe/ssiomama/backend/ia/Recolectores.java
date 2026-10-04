@@ -59,7 +59,7 @@ public class Recolectores {
             int aforo,
             String estado) {}
 
-    record Tipo(String nombre, int precio, int cantidad, int vendidas, int consumiciones) {
+    record Tipo(String nombre, int precio, int cantidad, int vendidas, int consumiciones, String descripcion) {
         int quedan() {
             return Math.max(0, cantidad - vendidas);
         }
@@ -109,7 +109,7 @@ public class Recolectores {
 
     List<Tipo> tiposALaVenta(String eventoId) {
         return sql.sql("""
-                select nombre, "precioCentimos", cantidad, vendidas, "incluyeConsumo"
+                select nombre, "precioCentimos", cantidad, vendidas, "incluyeConsumo", descripcion
                 from "TipoEntrada" where "eventoId" = :id and activo
                 order by "precioCentimos"
                 """)
@@ -119,7 +119,8 @@ public class Recolectores {
                         rs.getInt("precioCentimos"),
                         rs.getInt("cantidad"),
                         rs.getInt("vendidas"),
-                        rs.getInt("incluyeConsumo")))
+                        rs.getInt("incluyeConsumo"),
+                        rs.getString("descripcion")))
                 .list();
     }
 
@@ -304,15 +305,20 @@ public class Recolectores {
                         rs.getInt("aforo"), rs.getInt("asistentes")))
                 .list();
 
+        // El cabeza de cartel primero: su género es el de la noche (`Rasgos.de` toma el primero).
         Map<String, List<String>> generos = new HashMap<>();
         sql.sql("""
-                select distinct ea."eventoId", a.genero
+                select ea."eventoId", a.genero
                 from "EventoArtista" ea join "Artista" a on a.id = ea."artistaId"
                 where a.genero is not null
+                order by ea."eventoId", ea."cabezaCartel" desc, a.nombre
                 """)
                 .query((rs, n) -> Map.entry(rs.getString(1), rs.getString(2)))
                 .list()
-                .forEach(e -> generos.computeIfAbsent(e.getKey(), k -> new ArrayList<>()).add(e.getValue()));
+                .forEach(e -> {
+                    List<String> suyos = generos.computeIfAbsent(e.getKey(), k -> new ArrayList<>());
+                    if (!suyos.contains(e.getValue())) suyos.add(e.getValue());
+                });
 
         Map<String, List<ModeloDeDemanda.Consumo>> consumos = new HashMap<>();
         sql.sql("""
@@ -348,7 +354,10 @@ public class Recolectores {
         for (Noche n : aLaVenta) {
             long dias = (long) Math.ceil(Duration.between(ahora, n.empieza()).toHours() / 24.0);
             String tipos = tiposALaVenta(n.id()).stream()
-                    .map(t -> t.nombre() + " a " + Club.soles(t.precio()) + ": " + t.vendidas() + "/" + t.cantidad() + " vendidas")
+                    // La descripción va porque cambia la lectura: una entrada «en puerta» no se vende
+                    // antes de la noche, y sin decirlo el modelo propone rebajarla por «no tener ventas».
+                    .map(t -> t.nombre() + " a " + Club.soles(t.precio()) + ": " + t.vendidas() + "/" + t.cantidad()
+                            + " vendidas" + (t.descripcion() == null ? "" : " (" + t.descripcion() + ")"))
                     .collect(Collectors.joining("; "));
             lineas.add(n.titulo() + " (dentro de " + dias + " días, aforo " + n.aforo() + ") — " + tipos);
         }

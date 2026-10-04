@@ -124,7 +124,8 @@ class PermisosServidorRealTest {
         HttpHeaders portero = sesionDe("puerta@ssiomama.test");
         HttpHeaders direccion = sesionDe("admin@ssiomama.test");
 
-        for (String ruta : List.of("/api/promotores", "/api/local", "/api/ia/propuestas", "/api/ia/metricas")) {
+        for (String ruta : List.of(
+                "/api/promotores", "/api/local", "/api/ia/propuestas", "/api/ia/metricas", "/api/panel/historial")) {
             assertThat(estadoDe(ruta, new HttpHeaders())).as(ruta).isEqualTo(HttpStatus.UNAUTHORIZED);
             assertThat(estadoDe(ruta, portero)).as(ruta).isEqualTo(HttpStatus.FORBIDDEN);
             assertThat(estadoDe(ruta, direccion)).as(ruta).isEqualTo(HttpStatus.OK);
