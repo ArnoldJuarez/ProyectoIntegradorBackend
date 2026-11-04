@@ -8,8 +8,10 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
@@ -47,11 +49,17 @@ public class LocalController {
     private final SalaRepository salas;
     private final ZonaRepository zonas;
     private final PuertaRepository puertas;
+    private final ElementoDeSeguridadRepository elementos;
 
-    public LocalController(SalaRepository salas, ZonaRepository zonas, PuertaRepository puertas) {
+    public LocalController(
+            SalaRepository salas,
+            ZonaRepository zonas,
+            PuertaRepository puertas,
+            ElementoDeSeguridadRepository elementos) {
         this.salas = salas;
         this.zonas = zonas;
         this.puertas = puertas;
+        this.elementos = elementos;
     }
 
     // ── Lo que sale ───────────────────────────────────────────────
@@ -66,12 +74,13 @@ public class LocalController {
             double ancho,
             double fondo,
             double alto,
-            int tono) {
+            int tono,
+            int piso) {
 
         static ZonaDelPlano de(Zona z) {
             return new ZonaDelPlano(
                     z.getId(), z.getNombre(), z.getTipo(), z.getAforo(),
-                    z.getX(), z.getY(), z.getAncho(), z.getFondo(), z.getAlto(), z.getTono());
+                    z.getX(), z.getY(), z.getAncho(), z.getFondo(), z.getAlto(), z.getTono(), z.getPiso());
         }
     }
 
@@ -83,12 +92,13 @@ public class LocalController {
             boolean activo,
             double x,
             double y,
-            double ancho) {
+            double ancho,
+            int piso) {
 
         static PuertaDelPlano de(Puerta p) {
             return new PuertaDelPlano(
                     p.getId(), p.getNombre(), p.isEsSalidaEmergencia(), p.getCaudalPorMinuto(),
-                    p.isActivo(), p.getX(), p.getY(), p.getAncho());
+                    p.isActivo(), p.getX(), p.getY(), p.getAncho(), p.getPiso());
         }
     }
 
@@ -99,7 +109,15 @@ public class LocalController {
             double planoAncho,
             double planoFondo,
             List<ZonaDelPlano> zonas,
-            List<PuertaDelPlano> puertas) {}
+            List<PuertaDelPlano> puertas,
+            List<ElementoDelPlano> elementos) {}
+
+    public record ElementoDelPlano(String id, TipoDeElemento tipo, String nombre, int piso, double x, double y) {
+
+        static ElementoDelPlano de(ElementoDeSeguridad e) {
+            return new ElementoDelPlano(e.getId(), e.getTipo(), e.getNombre(), e.getPiso(), e.getX(), e.getY());
+        }
+    }
 
     // ── Lo que entra ──────────────────────────────────────────────
     //
@@ -115,7 +133,9 @@ public class LocalController {
             @DecimalMin("0") @DecimalMax("500") double ancho,
             @DecimalMin("0") @DecimalMax("500") double fondo,
             @DecimalMin("0") @DecimalMax("40") double alto,
-            @Min(0) @Max(100_000) int aforo) {}
+            @Min(0) @Max(100_000) int aforo,
+            /** Nulo: se queda en la planta que estaba. */
+            @Min(-2) @Max(5) Integer piso) {}
 
     public record PuertaDibujada(
             @NotBlank String id,
@@ -124,14 +144,33 @@ public class LocalController {
             @DecimalMin(value = "0.1", message = "Una puerta mide al menos 10 cm")
             @DecimalMax("20") double ancho,
             @Min(0) @Max(10_000) int caudalPorMinuto,
-            boolean esSalidaEmergencia) {}
+            boolean esSalidaEmergencia,
+            /** Nulo: se queda en la planta que estaba. */
+            @Min(-2) @Max(5) Integer piso) {}
 
     public record GeometriaDeSala(
             @NotBlank(message = "Falta la sala") String salaId,
             @DecimalMin("0") @DecimalMax("500") double planoAncho,
             @DecimalMin("0") @DecimalMax("500") double planoFondo,
             @NotNull @Size(max = 60) List<@Valid ZonaDibujada> zonas,
-            @NotNull @Size(max = 60) List<@Valid PuertaDibujada> puertas) {}
+            @NotNull @Size(max = 60) List<@Valid PuertaDibujada> puertas,
+            /** Nulo: los elementos de seguridad no se tocan. */
+            @Size(max = 200) List<@Valid ElementoDibujado> elementos) {}
+
+    /**
+     * Un elemento de seguridad tal y como llega del editor.
+     *
+     * @param id el de un elemento existente, o vacío para uno nuevo. Los que no
+     *     vengan se borran: el editor manda la lista entera.
+     */
+    public record ElementoDibujado(
+            String id,
+            @NotNull(message = "Falta el tipo de un elemento de seguridad") TipoDeElemento tipo,
+            @Size(max = 80) String nombre,
+            @Min(-2) @Max(5) int piso,
+            // Un poco más allá del plano: el punto de reunión está fuera, en la calle.
+            @DecimalMin("-100") @DecimalMax("600") double x,
+            @DecimalMin("-100") @DecimalMax("600") double y) {}
 
     // ── Endpoints ─────────────────────────────────────────────────
 
@@ -148,7 +187,9 @@ public class LocalController {
                         zonas.findBySalaIdOrderByOrdenAsc(s.getId()).stream()
                                 .map(ZonaDelPlano::de).toList(),
                         puertas.findBySalaIdOrderByNombreAsc(s.getId()).stream()
-                                .map(PuertaDelPlano::de).toList()))
+                                .map(PuertaDelPlano::de).toList(),
+                        elementos.findBySalaIdOrderByTipoAscNombreAsc(s.getId()).stream()
+                                .map(ElementoDelPlano::de).toList()))
                 .toList();
     }
 
@@ -180,13 +221,34 @@ public class LocalController {
 
         sala.medir(geometria.planoAncho(), geometria.planoFondo());
         for (ZonaDibujada z : geometria.zonas()) {
-            suyasZ.get(z.id()).dibujar(
-                    z.tipo(), z.x(), z.y(), z.ancho(), z.fondo(), z.alto(), z.aforo());
+            Zona zona = suyasZ.get(z.id());
+            zona.dibujar(z.tipo(), z.x(), z.y(), z.ancho(), z.fondo(), z.alto(), z.aforo(),
+                    z.piso() == null ? zona.getPiso() : z.piso());
         }
         for (PuertaDibujada p : geometria.puertas()) {
-            suyasP.get(p.id()).dibujar(
-                    p.x(), p.y(), p.ancho(), p.caudalPorMinuto(), p.esSalidaEmergencia());
+            Puerta puerta = suyasP.get(p.id());
+            puerta.dibujar(p.x(), p.y(), p.ancho(), p.caudalPorMinuto(), p.esSalidaEmergencia(),
+                    p.piso() == null ? puerta.getPiso() : p.piso());
+        }
+        if (geometria.elementos() != null) {
+            guardarElementos(sala.getId(), geometria.elementos());
         }
         return ResponseEntity.noContent().build();
+    }
+
+    /** La lista entera: los que vienen con id se recolocan, los nuevos se crean y los que faltan se quitan. */
+    private void guardarElementos(String salaId, List<ElementoDibujado> lista) {
+        Map<String, ElementoDeSeguridad> suyos = elementos.findBySalaIdOrderByTipoAscNombreAsc(salaId).stream()
+                .collect(Collectors.toMap(ElementoDeSeguridad::getId, Function.identity()));
+        Set<String> vistos = new HashSet<>();
+        for (ElementoDibujado d : lista) {
+            ElementoDeSeguridad e = d.id() != null && suyos.containsKey(d.id())
+                    ? suyos.get(d.id())
+                    : ElementoDeSeguridad.nuevo(salaId);
+            e.colocar(d.tipo(), d.nombre(), d.piso(), d.x(), d.y());
+            elementos.save(e);
+            vistos.add(e.getId());
+        }
+        suyos.values().stream().filter(e -> !vistos.contains(e.getId())).forEach(elementos::delete);
     }
 }

@@ -410,4 +410,39 @@ class CompraTest {
                 .isInstanceOf(CompraRechazada.class)
                 .hasMessageContaining("No encontramos");
     }
+
+    // ── El promotor del enlace ────────────────────────────────────
+
+    /** El promotor de un pedido, leído de la base y no de la entidad. */
+    private String promotorDelPedido(String codigo) {
+        return jdbc.queryForObject(
+                "select u.\"codigoPromotor\" from \"Pedido\" p left join \"Usuario\" u on u.id = p.\"promotorId\" where p.codigo = ?",
+                String.class,
+                codigo);
+    }
+
+    @Test
+    @DisplayName("la compra desde el enlace de un promotor le cuenta a él, escriba como escriba el código")
+    void elCodigoDelEnlaceQuedaEnElPedido() {
+        String general = idDeTipo(NOCHE, "General");
+
+        var abierto = compra.abrir(
+                NOCHE, alguienNuevo(), List.of(new Peticion(general, 2)), " piero ", mientrasSeVende(NOCHE));
+        comoUnaPeticionNueva();
+
+        assertThat(promotorDelPedido(abierto.codigo())).isEqualTo("PIERO");
+    }
+
+    @Test
+    @DisplayName("un código de promotor que no existe no impide comprar: queda como venta directa")
+    void unCodigoQueNoExisteNoBloqueaLaCompra() {
+        String general = idDeTipo(NOCHE, "General");
+
+        var abierto = compra.abrir(
+                NOCHE, alguienNuevo(), List.of(new Peticion(general, 1)), "NOEXISTE", mientrasSeVende(NOCHE));
+        comoUnaPeticionNueva();
+
+        assertThat(abierto.codigo()).isNotBlank();
+        assertThat(promotorDelPedido(abierto.codigo())).isNull();
+    }
 }

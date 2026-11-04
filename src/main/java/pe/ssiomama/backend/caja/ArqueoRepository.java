@@ -25,6 +25,7 @@ public interface ArqueoRepository extends JpaRepository<ArqueoDeCaja, String> {
             select a from ArqueoDeCaja a
             join fetch a.sala
             join fetch a.responsable
+            left join fetch a.barra
             order by a.abiertaEn desc
             """)
     List<ArqueoDeCaja> buscarRecientes(Pageable pagina);
@@ -34,6 +35,7 @@ public interface ArqueoRepository extends JpaRepository<ArqueoDeCaja, String> {
             select a from ArqueoDeCaja a
             join fetch a.sala
             join fetch a.responsable
+            left join fetch a.barra
             where a.id = :id
             """)
     Optional<ArqueoDeCaja> buscarPorIdConDetalle(@Param("id") String id);
@@ -50,6 +52,7 @@ public interface ArqueoRepository extends JpaRepository<ArqueoDeCaja, String> {
             select a from ArqueoDeCaja a
             join fetch a.sala
             join fetch a.responsable
+            left join fetch a.barra
             where a.responsable.id = :usuarioId and a.cerradaEn is null
             order by a.abiertaEn desc
             limit 1

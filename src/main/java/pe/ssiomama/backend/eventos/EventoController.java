@@ -92,12 +92,31 @@ public class EventoController {
     }
 
     /** La ficha completa de una noche. */
+    /** Un artista del cartel, en el orden en que se lee. */
+    public record ArtistaDelCartel(String id, String nombre, String genero, boolean cabezaDeCartel) {
+
+        static ArtistaDelCartel de(Actuacion a) {
+            return new ArtistaDelCartel(
+                    a.getArtista().getId(), a.getArtista().getNombre(), a.getArtista().getGenero(),
+                    a.isCabezaDeCartel());
+        }
+    }
+
+    /**
+     * La ficha de una noche en el panel.
+     *
+     * <p>Lleva el id de la sala y el cartel con sus ids porque el formulario de
+     * edición parte de aquí: sin ellos, guardar un cambio de título dejaba la
+     * noche sin artistas, que es lo que pasaba antes de añadirlos.
+     */
     public record EventoDetalle(
             String id,
             String slug,
             String titulo,
             String descripcion,
             String portada,
+            String video,
+            String salaId,
             String sala,
             int aforoDeSala,
             Instant puertasA,
@@ -108,7 +127,8 @@ public class EventoController {
             EstadoDeEvento estado,
             int vendidas,
             long recaudadoCentimos,
-            List<TipoDeEntradaResumen> tiposDeEntrada) {
+            List<TipoDeEntradaResumen> tiposDeEntrada,
+            List<ArtistaDelCartel> cartel) {
 
         static EventoDetalle de(Evento e) {
             return new EventoDetalle(
@@ -117,6 +137,8 @@ public class EventoController {
                     e.getTitulo(),
                     e.getDescripcion(),
                     e.getPortada(),
+                    e.getVideo(),
+                    e.getSala().getId(),
                     e.getSala().getNombre(),
                     e.getSala().getAforo(),
                     e.getPuertasA(),
@@ -127,7 +149,8 @@ public class EventoController {
                     e.getEstado(),
                     e.getVendidas(),
                     e.getRecaudadoCentimos(),
-                    e.getTiposDeEntrada().stream().map(TipoDeEntradaResumen::de).toList());
+                    e.getTiposDeEntrada().stream().map(TipoDeEntradaResumen::de).toList(),
+                    e.getCartel().stream().map(ArtistaDelCartel::de).toList());
         }
     }
 

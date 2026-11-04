@@ -24,4 +24,12 @@ public interface ActuacionRepository extends JpaRepository<Actuacion, ActuacionI
     @Modifying
     @Query("delete from Actuacion a where a.evento.id = :eventoId")
     void borrarElCartelDe(@Param("eventoId") String eventoId);
+
+    /**
+     * El cartel de una noche como entidades. Para borrarlo junto con la noche
+     * hay que pasar por aquí y no por el borrado masivo: ver
+     * {@link GestionDeEventos#borrar}.
+     */
+    @Query("select a from Actuacion a where a.evento.id = :eventoId")
+    java.util.List<Actuacion> buscarDeLaNoche(@Param("eventoId") String eventoId);
 }

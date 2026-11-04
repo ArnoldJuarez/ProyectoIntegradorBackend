@@ -1,6 +1,12 @@
 package pe.ssiomama.backend.ia;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -9,6 +15,13 @@ import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import pe.ssiomama.backend.eventos.Artista;
+import pe.ssiomama.backend.eventos.ArtistaRepository;
+import pe.ssiomama.backend.eventos.EstadoDeEvento;
+import pe.ssiomama.backend.eventos.Evento;
+import pe.ssiomama.backend.eventos.GestionDeEventos;
+import pe.ssiomama.backend.eventos.Sala;
+import pe.ssiomama.backend.eventos.SalaRepository;
 
 /**
  * Convierte una propuesta aprobada en registros reales.
@@ -21,8 +34,9 @@ import org.springframework.transaction.annotation.Transactional;
  * devuelve el aviso. Un SKU que el modelo escribió mal no debería tirar abajo
  * las otras cinco líneas que sí estaban bien.
  *
- * <p>Nada sale hacia fuera: las campañas quedan en borrador y los pedidos a
- * proveedor también. Quien los envíe lo hará a mano.
+ * <p>Nada sale hacia fuera: las campañas quedan en borrador, los pedidos a
+ * proveedor también y las noches nuevas se crean sin publicar. Quien las envíe
+ * o las publique lo hará a mano.
  */
 @Service
 public class AplicadorDePropuestas {
@@ -34,15 +48,31 @@ public class AplicadorDePropuestas {
     private static final String AHORA = "(now() at time zone 'utc')";
 
     private final JdbcClient sql;
+    private final GestionDeEventos programacion;
+    private final SalaRepository salas;
+    private final ArtistaRepository artistas;
 
-    public AplicadorDePropuestas(JdbcClient sql) {
+    public AplicadorDePropuestas(
+            JdbcClient sql, GestionDeEventos programacion, SalaRepository salas, ArtistaRepository artistas) {
         this.sql = sql;
+        this.programacion = programacion;
+        this.salas = salas;
+        this.artistas = artistas;
     }
+
+    /** Algo creado al aplicar, con la ruta del panel donde se sigue gestionando a mano. */
+    public record Enlace(String texto, String ruta) {}
 
     /**
      * @param aplicada {@code false} cuando era informativa o no quedó nada que hacer
+     * @param enlaces lo que se ha creado, para abrirlo y terminarlo a mano
      */
-    public record Resultado(boolean aplicada, String resumen, List<String> avisos) {}
+    public record Resultado(boolean aplicada, String resumen, List<String> avisos, List<Enlace> enlaces) {
+
+        public Resultado(boolean aplicada, String resumen, List<String> avisos) {
+            this(aplicada, resumen, avisos, List.of());
+        }
+    }
 
     @Transactional
     public Resultado aplicar(TipoDePropuesta tipo, JsonNode datos, String ejecucionId) {
@@ -52,6 +82,7 @@ public class AplicadorDePropuestas {
             case ORDEN_COMPRA -> pedido(datos);
             case CAMBIO_PRECIO -> precios(datos);
             case INFORME -> new Resultado(false, "Es un informe: no hay nada que ejecutar, queda archivado.", List.of());
+            case EVENTO -> noches(datos);
         };
     }
 
@@ -279,6 +310,156 @@ public class AplicadorDePropuestas {
         }
         return new Resultado(true, cambiados + (cambiados == 1 ? " precio actualizado" : " precios actualizados")
                 + " en eventos futuros.", avisos);
+    }
+
+    // ── Noches nuevas → borradores en la programación ─────────────
+
+    /**
+     * Crea en borrador las noches que propuso el programador.
+     *
+     * <p>Todo lo que podría hacer fallar a {@link GestionDeEventos} se comprueba
+     * <b>antes</b> de llamarla: una excepción dentro de una operación
+     * transaccional marca la transacción entera para deshacer, y una noche mal
+     * puesta tiraría también las buenas. Así, lo que no cuadra se salta con un
+     * aviso y el resto se crea.
+     *
+     * <p>Se crean en {@link EstadoDeEvento#BORRADOR}, sin flyer ni video: la
+     * propuesta da el esqueleto y la persona termina la noche a mano —sube el
+     * flyer, ajusta lo que quiera— y la publica cuando esté lista.
+     */
+    private Resultado noches(JsonNode datos) {
+        Optional<Sala> principal = salas.findAllByOrderByAforoDesc().stream().findFirst();
+        if (principal.isEmpty()) {
+            return new Resultado(false, "No hay ninguna sala dada de alta donde programar.", List.of());
+        }
+        Sala sala = principal.get();
+
+        List<String> avisos = new ArrayList<>();
+        List<Enlace> creadas = new ArrayList<>();
+        Instant ahora = Instant.now();
+
+        for (JsonNode n : datos.path("noches")) {
+            String titulo = recortar(n.path("titulo").asText("").trim(), 160);
+            if (titulo.length() < 3) {
+                avisos.add("Una noche venía sin título; se omite.");
+                continue;
+            }
+
+            LocalDate fecha;
+            try {
+                fecha = LocalDate.parse(n.path("fecha").asText(""));
+            } catch (DateTimeParseException e) {
+                avisos.add("«" + titulo + "» no traía una fecha válida; se omite.");
+                continue;
+            }
+            LocalTime puertas = hora(n.path("puertas").asText(""), LocalTime.of(21, 0), titulo, "apertura", avisos);
+            LocalTime cierre = hora(n.path("cierre").asText(""), LocalTime.of(3, 0), titulo, "cierre", avisos);
+
+            Instant puertasA = fecha.atTime(puertas).atZone(Club.ZONA).toInstant();
+            // Un cierre «antes» que la apertura es de madrugada: del día siguiente.
+            Instant terminaA = (cierre.isAfter(puertas) ? fecha : fecha.plusDays(1))
+                    .atTime(cierre).atZone(Club.ZONA).toInstant();
+
+            if (!puertasA.isAfter(ahora)) {
+                avisos.add("«" + titulo + "» era para el " + fecha + ", que ya pasó; se omite.");
+                continue;
+            }
+            Optional<String> ocupada = nocheDelDia(fecha);
+            if (ocupada.isPresent()) {
+                avisos.add("El " + Club.fechaLarga(fecha) + " ya tiene «" + ocupada.get()
+                        + "»; «" + titulo + "» no se crea.");
+                continue;
+            }
+
+            List<String> cartel = new ArrayList<>();
+            for (JsonNode nombre : n.path("artistas")) {
+                String pedido = nombre.asText("").trim();
+                if (pedido.isEmpty()) continue;
+                Optional<String> id = artistas.findFirstByNombreIgnoreCase(pedido).map(Artista::getId);
+                if (id.isEmpty()) {
+                    avisos.add("«" + pedido + "» no está en el catálogo de artistas: dalo de alta y añádelo al "
+                            + "cartel de «" + titulo + "» si lo quieres.");
+                } else if (!cartel.contains(id.get())) {
+                    cartel.add(id.get());
+                }
+            }
+
+            Evento noche = programacion.crear(new GestionDeEventos.DatosDeNoche(
+                    titulo,
+                    recortar(n.path("descripcion").asText("").trim(), 2000),
+                    sala.getId(),
+                    puertasA,
+                    terminaA,
+                    // La casa es para mayores de edad, diga lo que diga la propuesta.
+                    Math.max(Club.EDAD_MINIMA, Math.min(99, n.path("edadMinima").asInt(Club.EDAD_MINIMA))),
+                    recortar(n.path("vestimenta").asText("").trim(), 120),
+                    EstadoDeEvento.BORRADOR,
+                    null,
+                    null,
+                    cartel.stream().limit(10).toList()));
+
+            int quedan = sala.getAforo();
+            for (JsonNode t : n.path("entradas")) {
+                String nombre = recortar(t.path("nombre").asText("").trim(), 60);
+                int precio = (int) Math.round(t.path("precioCentimos").asDouble(-1));
+                int cantidad = (int) Math.round(t.path("cantidad").asDouble(0));
+                if (nombre.length() < 2 || precio < 0 || precio > 1_000_000 || cantidad < 1) {
+                    avisos.add("Una entrada de «" + titulo + "» venía incompleta; se omite.");
+                    continue;
+                }
+                if (quedan == 0) {
+                    avisos.add("«" + nombre + "» no cabe en el aforo de " + sala.getNombre() + "; se omite.");
+                    continue;
+                }
+                if (cantidad > quedan) {
+                    avisos.add("«" + nombre + "» pedía " + cantidad + " entradas y solo quedaban " + quedan
+                            + " de aforo; se han puesto " + quedan + ".");
+                    cantidad = quedan;
+                }
+                quedan -= cantidad;
+                programacion.anadirTipo(noche.getSlug(), new GestionDeEventos.DatosDeTipo(
+                        nombre,
+                        recortar(t.path("descripcion").asText("").trim(), 300),
+                        precio,
+                        cantidad,
+                        Math.max(1, Math.min(20, t.path("maximoPorPedido").asInt(6))),
+                        0,
+                        true));
+            }
+
+            creadas.add(new Enlace(noche.getTitulo(), "/panel/eventos/" + noche.getSlug()));
+        }
+
+        if (creadas.isEmpty()) {
+            return new Resultado(false, "No se ha podido crear ninguna de las noches propuestas.", avisos);
+        }
+        return new Resultado(true, (creadas.size() == 1 ? "1 noche creada" : creadas.size() + " noches creadas")
+                + " en borrador. Sube el flyer o el video y publícalas cuando estén listas.", avisos, creadas);
+    }
+
+    /** Una hora «HH:MM»; si no lo es, la de siempre con un aviso. */
+    private static LocalTime hora(String texto, LocalTime porDefecto, String titulo, String cual, List<String> avisos) {
+        try {
+            return LocalTime.parse(texto.length() == 4 ? "0" + texto : texto);
+        } catch (DateTimeParseException e) {
+            avisos.add("La hora de " + cual + " de «" + titulo + "» no era válida; se ha puesto " + porDefecto + ".");
+            return porDefecto;
+        }
+    }
+
+    /** El título de la noche que ya hay ese día (sin contar las canceladas), si la hay. */
+    private Optional<String> nocheDelDia(LocalDate dia) {
+        // La noche va de las 06:00 de ese día a las 06:00 del siguiente, en hora de la sala.
+        Instant desde = dia.atTime(6, 0).atZone(Club.ZONA).toInstant();
+        return sql.sql("""
+                select titulo from "Evento"
+                where estado <> 'CANCELADO' and "empiezaEn" >= :desde and "empiezaEn" < :hasta
+                order by "empiezaEn" limit 1
+                """)
+                .param("desde", LocalDateTime.ofInstant(desde, ZoneOffset.UTC))
+                .param("hasta", LocalDateTime.ofInstant(desde.plusSeconds(24 * 3600), ZoneOffset.UTC))
+                .query(String.class)
+                .optional();
     }
 
     private static String recortar(String texto, int maximo) {

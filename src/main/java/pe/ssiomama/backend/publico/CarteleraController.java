@@ -126,6 +126,8 @@ public class CarteleraController {
             String titulo,
             String descripcion,
             String portada,
+            /** Un archivo subido, un MP4 externo o un enlace de YouTube; casi siempre nulo. */
+            String video,
             String sala,
             Instant puertasA,
             Instant empiezaA,
@@ -143,6 +145,7 @@ public class CarteleraController {
                     e.getTitulo(),
                     e.getDescripcion(),
                     e.getPortada(),
+                    e.getVideo(),
                     e.getSala().getNombre(),
                     e.getPuertasA(),
                     e.getEmpiezaA(),

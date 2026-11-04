@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pe.ssiomama.backend.auth.Usuario;
+import pe.ssiomama.backend.auth.UsuarioRepository;
 import pe.ssiomama.backend.eventos.EstadoDeEvento;
 import pe.ssiomama.backend.eventos.Evento;
 import pe.ssiomama.backend.eventos.EventoRepository;
@@ -18,6 +19,8 @@ import pe.ssiomama.backend.inventario.MovimientoDeInventario;
 import pe.ssiomama.backend.inventario.MovimientoRepository;
 import pe.ssiomama.backend.inventario.Producto;
 import pe.ssiomama.backend.inventario.ProductoRepository;
+import pe.ssiomama.backend.personal.Puesto;
+import pe.ssiomama.backend.personal.PuestoRepository;
 
 /**
  * La caja de la barra: abrir turno, cobrar y cerrar contando.
@@ -53,6 +56,8 @@ public class Barra {
     private final MovimientoRepository movimientos;
     private final SalaRepository salas;
     private final EventoRepository eventos;
+    private final PuestoRepository puestos;
+    private final UsuarioRepository usuarios;
 
     public Barra(
             ArqueoRepository arqueos,
@@ -60,7 +65,11 @@ public class Barra {
             ProductoRepository productos,
             MovimientoRepository movimientos,
             SalaRepository salas,
-            EventoRepository eventos) {
+            EventoRepository eventos,
+            PuestoRepository puestos,
+            UsuarioRepository usuarios) {
+        this.puestos = puestos;
+        this.usuarios = usuarios;
         this.arqueos = arqueos;
         this.ventas = ventas;
         this.productos = productos;
@@ -82,6 +91,19 @@ public class Barra {
      */
     @Transactional
     public ArqueoDeCaja abrirTurno(Usuario responsable, int fondoCentimos) {
+        return abrirTurno(responsable, fondoCentimos, null);
+    }
+
+    /**
+     * Abre el turno en una barra concreta.
+     *
+     * @param barraId la barra elegida en la pantalla. Nula: la del puesto de
+     *     quien abre, o la única que haya. Si hay varias y no se sabe cuál, se
+     *     pregunta en vez de adivinar: un turno en la barra equivocada reparte
+     *     mal las ventas de toda la noche.
+     */
+    @Transactional
+    public ArqueoDeCaja abrirTurno(Usuario responsable, int fondoCentimos, String barraId) {
         if (fondoCentimos < 0) {
             throw new CajaRechazada("El fondo de caja no puede ser negativo.");
         }
@@ -92,8 +114,36 @@ public class Barra {
                             .findFirst()
                             .orElseThrow(() -> new CajaRechazada(
                                     "No hay ninguna sala dada de alta para abrir caja."));
-                    return arqueos.save(ArqueoDeCaja.abrir(sala, responsable, fondoCentimos));
+                    return arqueos.save(ArqueoDeCaja.abrir(sala, barraPara(responsable, barraId), responsable, fondoCentimos));
                 });
+    }
+
+    /** Las barras donde se puede abrir turno hoy. */
+    @Transactional(readOnly = true)
+    public List<Puesto> barrasActivas() {
+        return puestos.findByEsDeBarraTrueOrderByActivoDescNombreAsc().stream().filter(Puesto::isActivo).toList();
+    }
+
+    private Puesto barraPara(Usuario responsable, String barraId) {
+        if (barraId != null && !barraId.isBlank()) {
+            return puestos.findById(barraId)
+                    .filter(Puesto::isEsDeBarra)
+                    .filter(Puesto::isActivo)
+                    .orElseThrow(() -> new CajaRechazada("Esa barra no existe o ya no se monta."));
+        }
+        // Se relee: quien llega de la sesión viene sin su puesto cargado, y
+        // pedírselo fuera de su transacción revienta.
+        Puesto suyo = usuarios.findById(responsable.getId()).map(Usuario::getPuesto).orElse(null);
+        if (suyo != null && suyo.isEsDeBarra() && suyo.isActivo()) {
+            return suyo;
+        }
+        List<Puesto> activas = barrasActivas();
+        if (activas.size() > 1) {
+            throw new CajaRechazada("Elige en qué barra vas a cobrar.");
+        }
+        // Sin ninguna barra dada de alta el turno se abre igual: sin barra, sus
+        // ventas salen como «Sin barra asignada», pero se puede cobrar.
+        return activas.isEmpty() ? null : activas.getFirst();
     }
 
     /**

@@ -8,6 +8,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,12 +38,20 @@ public class ProgramacionController {
     private final GestionDeEventos gestion;
     private final SalaRepository salas;
     private final ArtistaRepository artistas;
+    private final EventoRepository eventos;
+    private final Medios medios;
 
     public ProgramacionController(
-            GestionDeEventos gestion, SalaRepository salas, ArtistaRepository artistas) {
+            GestionDeEventos gestion,
+            SalaRepository salas,
+            ArtistaRepository artistas,
+            EventoRepository eventos,
+            Medios medios) {
         this.gestion = gestion;
         this.salas = salas;
         this.artistas = artistas;
+        this.eventos = eventos;
+        this.medios = medios;
     }
 
     // ── Lo que entra ──────────────────────────────────────────────
@@ -70,6 +79,7 @@ public class ProgramacionController {
             String vestimenta,
             @NotNull(message = "Falta el estado") EstadoDeEvento estado,
             @Size(max = 500) String portada,
+            @Size(max = 500, message = "La dirección del video es demasiado larga") String video,
             @Size(max = 10, message = "Como mucho diez artistas en el cartel")
             List<String> artistaIds) {}
 
@@ -164,7 +174,27 @@ public class ProgramacionController {
     @Transactional
     public NocheGuardada editar(
             @PathVariable String slug, @Valid @RequestBody FormularioDeNoche formulario) {
-        return NocheGuardada.de(gestion.editar(slug, aDatos(formulario)));
+        // Lo que había antes, para borrar del disco lo que el formulario sustituya.
+        var antes = eventos.findBySlug(slug).map(e -> new String[] {e.getPortada(), e.getVideo()});
+
+        Evento noche = gestion.editar(slug, aDatos(formulario));
+
+        antes.ifPresent(a -> {
+            if (!Objects.equals(a[0], noche.getPortada())) medios.borrarSiEsNuestro(a[0]);
+            if (!Objects.equals(a[1], noche.getVideo())) medios.borrarSiEsNuestro(a[1]);
+        });
+        return NocheGuardada.de(noche);
+    }
+
+    /**
+     * Borra una noche sin historia: un borrador o una cancelada que no llegó a
+     * vender, reservar ni gastar nada. Ver {@link GestionDeEventos#borrar}.
+     */
+    @DeleteMapping("/{slug}")
+    @Transactional
+    public ResponseEntity<Void> borrar(@PathVariable String slug) {
+        gestion.borrar(slug).forEach(medios::borrarSiEsNuestro);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{slug}/entradas")
@@ -208,6 +238,7 @@ public class ProgramacionController {
                 f.vestimenta(),
                 f.estado(),
                 f.portada(),
+                f.video(),
                 f.artistaIds() == null ? List.of() : f.artistaIds());
     }
 

@@ -1,5 +1,13 @@
 package pe.ssiomama.backend.caja;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import pe.ssiomama.backend.personal.Puesto;
+import pe.ssiomama.backend.personal.PuestoRepository;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -29,17 +37,29 @@ public class CajaController {
 
     private final ArqueoRepository arqueos;
     private final VentaDeBarraRepository ventas;
+    private final PuestoRepository puestos;
 
-    public CajaController(ArqueoRepository arqueos, VentaDeBarraRepository ventas) {
+    public CajaController(ArqueoRepository arqueos, VentaDeBarraRepository ventas, PuestoRepository puestos) {
         this.arqueos = arqueos;
         this.ventas = ventas;
+        this.puestos = puestos;
     }
+
+    // ── Lo que entra ──────────────────────────────────────────────
+
+    public record NuevaBarra(
+            @NotBlank(message = "Ponle nombre a la barra")
+            @Size(min = 2, max = 40, message = "El nombre tiene entre 2 y 40 caracteres") String nombre) {}
+
+    public record CambioDeBarra(boolean activa) {}
 
     // ── Lo que sale por la API ────────────────────────────────────
 
     public record ArqueoEnLista(
             String id,
             String sala,
+            /** Nula en turnos viejos sin barra atribuida. */
+            String barra,
             String responsable,
             int aperturaCentimos,
             int esperadoCentimos,
@@ -59,6 +79,7 @@ public class CajaController {
             return new ArqueoEnLista(
                     a.getId(),
                     a.getSala().getNombre(),
+                    a.getBarra() == null ? null : a.getBarra().getNombre(),
                     a.getResponsable().getNombre(),
                     a.getAperturaCentimos(),
                     a.getEsperadoCentimos(),
@@ -109,7 +130,41 @@ public class CajaController {
             int cobros,
             List<CobroEnLista> ultimosCobros) {}
 
+    public record BarraDelLocal(String id, String nombre, boolean activa) {
+
+        static BarraDelLocal de(Puesto p) {
+            return new BarraDelLocal(p.getId(), p.getNombre(), p.isActivo());
+        }
+    }
+
     // ── Endpoints ─────────────────────────────────────────────────
+
+    /** Las barras del local: donde se abre cada turno. */
+    @GetMapping("/barras")
+    @Transactional(readOnly = true)
+    public List<BarraDelLocal> barras() {
+        return puestos.findByEsDeBarraTrueOrderByActivoDescNombreAsc().stream().map(BarraDelLocal::de).toList();
+    }
+
+    @PostMapping("/barras")
+    @Transactional
+    public ResponseEntity<BarraDelLocal> nuevaBarra(@Valid @RequestBody NuevaBarra n) {
+        if (puestos.existsByNombreIgnoreCase(n.nombre().trim())) {
+            throw new CajaRechazada("Ya hay un puesto que se llama «" + n.nombre().trim() + "».");
+        }
+        return ResponseEntity.status(HttpStatus.CREATED).body(BarraDelLocal.de(puestos.save(Puesto.nuevaBarra(n.nombre()))));
+    }
+
+    /** Retira o vuelve a montar una barra. No se borra: sus turnos viejos la nombran. */
+    @PutMapping("/barras/{id}")
+    @Transactional
+    public BarraDelLocal cambiarBarra(@PathVariable String id, @RequestBody CambioDeBarra c) {
+        Puesto p = puestos.findById(id)
+                .filter(Puesto::isEsDeBarra)
+                .orElseThrow(() -> new CajaRechazada("Esa barra no existe."));
+        p.cambiarActivo(c.activa());
+        return BarraDelLocal.de(p);
+    }
 
     @GetMapping("/arqueos")
     @Transactional(readOnly = true)

@@ -168,9 +168,48 @@ public class Agentes {
                         "metrics", lista(objeto("label", texto(), "value", texto())),
                         "recommendations", lista(texto(), "Entre 2 y 4 acciones concretas")),
                 datos::informe,
-                "Escribe el informe de cierre de la última noche. Incluye las métricas que importan, señala "
+                "Escribe el informe de cierre de la noche. Incluye las métricas que importan, señala "
                         + "lo que salió bien y lo que no, y termina con acciones concretas para el próximo evento. "
-                        + "Compara entradas vendidas con personas que entraron y comenta el absentismo si es llamativo."));
+                        + "Compara entradas vendidas con personas que entraron y comenta el absentismo si es llamativo. "
+                        + "Usa la comparación con noches parecidas para decir si fue buena o mala, no la impresión. "
+                        + "Si una barra, una caja o un promotor destaca para bien o para mal, nómbralo. "
+                        + "Si hay incidencias o notas de la sala, úsalas para explicar las cifras raras."));
+
+        // Propone noches enteras. Va al motor de prosa porque lo que produce lo
+        // lee el público (título y descripción), y los números que lleva —precios
+        // y cupos— salen de las plantillas reales del histórico, no de su cabeza.
+        definir(new Definicion(
+                ClaveDeAgente.PROGRAMADOR,
+                "Estudia el histórico y los huecos del calendario y propone noches completas.",
+                TipoDePropuesta.EVENTO,
+                true,
+                objeto(
+                        "razonamiento", texto("Qué has visto en el histórico y en el calendario, en dos o tres frases"),
+                        "noches", lista(objeto(
+                                "titulo", texto("Nombre de la noche, como iría en el flyer"),
+                                "fecha", texto("Una de las fechas libres, en formato AAAA-MM-DD"),
+                                "puertas", texto("Hora de apertura, HH:MM en 24 horas"),
+                                "cierre", texto("Hora de cierre, HH:MM en 24 horas; de madrugada es el día siguiente"),
+                                "descripcion", texto("Dos o tres frases para la web"),
+                                "vestimenta", texto(),
+                                "edadMinima", numero(),
+                                "artistas", lista(texto(), "Nombres exactos del catálogo; el primero es el cabeza de cartel"),
+                                "entradas", lista(objeto(
+                                        "nombre", texto(),
+                                        "descripcion", texto("Qué incluye o hasta qué hora vale"),
+                                        "precioCentimos", numero(),
+                                        "cantidad", numero(),
+                                        "maximoPorPedido", numero())),
+                                "motivo", texto("Por qué esta noche en esta fecha, con las cifras del histórico")),
+                                "Entre una y tres noches")),
+                datos::programacion,
+                "Propón entre una y tres noches nuevas para las fechas libres. Básate en lo que ha funcionado: "
+                        + "el día de la semana, el género y los artistas que más llenan, y aprovecha las vísperas de "
+                        + "feriado y las fechas especiales. Usa solo artistas del catálogo con su nombre exacto. "
+                        + "Títulos cortos al estilo de la casa. Pon entradas parecidas a las plantillas reales, con "
+                        + "precios redondos en soles enteros escritos en céntimos (2500 es S/ 25), y que la suma de "
+                        + "cupos no pase el aforo. Fíjate en qué día de la semana cae cada fecha. No repitas el título "
+                        + "de una noche que ya está programada."));
     }
 
     private void definir(Definicion d) {
@@ -193,12 +232,27 @@ public class Agentes {
      * @throws IaSinFormato si el modelo no da un JSON válido en tres intentos
      */
     public Resultado ejecutar(ClaveDeAgente clave, Disparador disparador, String lanzadoPorId) {
+        return ejecutar(clave, disparador, lanzadoPorId, null);
+    }
+
+    /**
+     * Igual, con otros datos en lugar de los que el agente recoge por su cuenta.
+     *
+     * <p>Es lo que permite pedir el informe de <b>una</b> noche concreta desde
+     * su ficha, en vez de siempre el de la última: el agente, sus instrucciones
+     * y su esquema son los mismos; solo cambia sobre qué trabaja.
+     *
+     * @param datos nulo para usar el recolector del agente
+     */
+    public Resultado ejecutar(
+            ClaveDeAgente clave, Disparador disparador, String lanzadoPorId, Supplier<Optional<String>> datos) {
         Definicion d = definicion(clave).orElseThrow(() ->
                 new AgenteSinDatos("No existe el agente «" + clave.etiqueta() + "»."));
+        Supplier<Optional<String>> recolector = datos == null ? d.recolector() : datos;
 
         String contexto;
         try {
-            contexto = d.recolector().get().orElseThrow(() ->
+            contexto = recolector.get().orElseThrow(() ->
                     new AgenteSinDatos("No hay datos suficientes para ejecutar «" + clave.nombre() + "»."));
         } catch (IllegalStateException e) {
             // El modelo de demanda sin histórico suficiente: lo dice tal cual.

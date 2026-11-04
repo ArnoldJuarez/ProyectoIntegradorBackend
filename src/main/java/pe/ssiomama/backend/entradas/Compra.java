@@ -8,6 +8,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.Locale;
+import pe.ssiomama.backend.auth.Usuario;
+import pe.ssiomama.backend.auth.UsuarioRepository;
 import pe.ssiomama.backend.caja.MetodoDePago;
 import pe.ssiomama.backend.clientes.CanalDeInteraccion;
 import pe.ssiomama.backend.clientes.Cliente;
@@ -84,6 +87,7 @@ public class Compra {
     private final FidelidadRepository fidelidad;
     private final InteraccionRepository interacciones;
     private final FirmaDeEntrada firma;
+    private final UsuarioRepository usuarios;
 
     public Compra(
             EventoRepository eventos,
@@ -93,7 +97,9 @@ public class Compra {
             EntradaRepository entradas,
             FidelidadRepository fidelidad,
             InteraccionRepository interacciones,
-            FirmaDeEntrada firma) {
+            FirmaDeEntrada firma,
+            UsuarioRepository usuarios) {
+        this.usuarios = usuarios;
         this.eventos = eventos;
         this.tipos = tipos;
         this.clientes = clientes;
@@ -127,6 +133,23 @@ public class Compra {
     @Transactional
     public PedidoAbierto abrir(
             String slugDelEvento, Comprador comprador, List<Peticion> peticiones, Instant ahora) {
+        return abrir(slugDelEvento, comprador, peticiones, null, ahora);
+    }
+
+    /**
+     * Igual, con el código del promotor que trajo a quien compra.
+     *
+     * <p>Un código que no existe, o de alguien dado de baja, <b>no bloquea la
+     * compra</b>: se ignora y el pedido queda como venta directa. Quien compra
+     * no tiene la culpa de que el enlace que le pasaron esté viejo, y perder
+     * una venta por eso sería absurdo.
+     *
+     * @param codigoDePromotor el de {@code ?promo=} en el enlace, o nulo
+     */
+    @Transactional
+    public PedidoAbierto abrir(
+            String slugDelEvento, Comprador comprador, List<Peticion> peticiones, String codigoDePromotor,
+            Instant ahora) {
 
         if (peticiones == null || peticiones.isEmpty()) {
             throw new CompraRechazada("Elige al menos una entrada.");
@@ -158,7 +181,7 @@ public class Compra {
         int comision = Tarifas.comisionDeGestion(subtotal);
 
         Pedido pedido = Pedido.abrir(
-                Tarifas.nuevoCodigoDePedido(), cliente, evento, comision, ahora);
+                Tarifas.nuevoCodigoDePedido(), cliente, evento, promotorDe(codigoDePromotor), comision, ahora);
 
         for (Peticion p : peticiones) {
             TipoDeEntrada tipo = porId.get(p.tipoDeEntradaId());
@@ -320,5 +343,13 @@ public class Compra {
                         comprador.apellido(),
                         email,
                         comprador.telefono())));
+    }
+
+    /** El promotor activo de ese código, o nulo. */
+    private Usuario promotorDe(String codigo) {
+        if (codigo == null || codigo.isBlank()) return null;
+        return usuarios.findByCodigoDePromotor(codigo.trim().toUpperCase(Locale.ROOT))
+                .filter(Usuario::isActivo)
+                .orElse(null);
     }
 }

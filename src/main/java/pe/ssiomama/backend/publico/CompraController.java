@@ -99,7 +99,12 @@ public class CompraController {
             @Size(max = 160) String email,
             @Size(max = 30, message = "Ese teléfono no parece correcto") String telefono,
             @NotEmpty(message = "Elige al menos una entrada")
-            @Valid List<LineaPedida> lineas) {}
+            @Valid List<LineaPedida> lineas,
+            /**
+             * El código del promotor del enlace ({@code ?promo=}). Opcional, y
+             * si no existe se ignora: ver {@code Compra.abrir}.
+             */
+            @Size(max = 20) String promo) {}
 
     // ── Lo que sale ───────────────────────────────────────────────
 
@@ -176,6 +181,7 @@ public class CompraController {
                 solicitud.lineas().stream()
                         .map(l -> new Compra.Peticion(l.tipoDeEntradaId(), l.cantidad()))
                         .toList(),
+                solicitud.promo(),
                 Instant.now()));
 
         return ResponseEntity.status(HttpStatus.CREATED)

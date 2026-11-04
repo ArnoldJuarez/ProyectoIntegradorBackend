@@ -11,13 +11,9 @@ spring:
     active: ${SPRING_PROFILES_ACTIVE:local}
 
   datasource:
-    # Base `teca`: el esquema con los nombres en espanol, con los mismos datos
-    # reales dentro (36 clientes, 139 entradas, 70 pedidos).
-    #
-    # La base anterior `discoteca` sigue existiendo, en ingles y sin tocar. Para
-    # volver a ella basta con poner DB_NAME=discoteca, aunque las entidades ya
-    # no cuadran con sus nombres.
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:teca}
+    # Base `discoteca`: el esquema con los nombres en espanol que adopta Flyway
+    # como V1, con los datos reales y los de muestra (ver datos/ y el README).
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:discoteca}
     username: ${DB_USER:postgres}
     # Sin valor por defecto a proposito: si falta, falla al arrancar y lo dice.
     # Ponla en la variable de entorno DB_PASSWORD o en application-local.yml.
@@ -25,10 +21,11 @@ spring:
 
   servlet:
     multipart:
-      # El limite por defecto es 1 MB, y un flyer de disenador pesa cuatro. Lo
-      # que se guarda pesa mucho menos: se reescala al subir.
-      max-file-size: 12MB
-      max-request-size: 13MB
+      # El limite por defecto es 1 MB, y un flyer de disenador pesa cuatro. El
+      # techo lo pone el video de una noche (80 MB); cada tipo de archivo
+      # comprueba despues su propio maximo (las imagenes, 12 MB) en Medios.
+      max-file-size: 80MB
+      max-request-size: 81MB
 
   flyway:
     enabled: true

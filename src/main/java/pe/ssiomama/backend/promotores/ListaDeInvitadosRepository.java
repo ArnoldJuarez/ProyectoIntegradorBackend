@@ -28,6 +28,16 @@ public interface ListaDeInvitadosRepository extends JpaRepository<ListaDeInvitad
             """)
     List<ListaDeInvitados> buscarDeLaNoche(@Param("slug") String slug);
 
+    /** Una lista con su noche, su promotor y sus filas. */
+    @Query("""
+            select distinct l from ListaDeInvitados l
+            join fetch l.evento
+            join fetch l.promotor
+            left join fetch l.invitados
+            where l.id = :id
+            """)
+    java.util.Optional<ListaDeInvitados> buscarConInvitados(@Param("id") String id);
+
     /** Personal con código de promotor, aunque todavía no tenga ninguna lista. */
     @Query("""
             select u from Usuario u
@@ -35,29 +45,4 @@ public interface ListaDeInvitadosRepository extends JpaRepository<ListaDeInvitad
             order by u.nombre
             """)
     List<Usuario> buscarPromotores();
-
-    interface VentaDePromotor {
-        String getPromotorId();
-
-        long getTotal();
-
-        long getPedidos();
-    }
-
-    /**
-     * Lo pagado con el código de cada promotor.
-     *
-     * <p>Nativa porque la entidad {@code Pedido} no mapea {@code promotorId}: la
-     * compra todavía no recoge el código, y este es el único sitio que lo lee.
-     * El estado va como literal SQL, que PostgreSQL convierte al enum solo.
-     */
-    @Query(value = """
-            select "promotorId" as promotorId,
-                   coalesce(sum("totalCentimos"), 0) as total,
-                   count(*) as pedidos
-            from "Pedido"
-            where estado = 'PAGADO' and "promotorId" is not null
-            group by "promotorId"
-            """, nativeQuery = true)
-    List<VentaDePromotor> ventasPorPromotor();
 }

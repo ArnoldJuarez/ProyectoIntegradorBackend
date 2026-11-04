@@ -2,21 +2,31 @@ package pe.ssiomama.backend.ia;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import pe.ssiomama.backend.clientes.Crm;
 import pe.ssiomama.backend.clientes.Segmento;
+import pe.ssiomama.backend.noches.ExpedienteDeNoche;
+import pe.ssiomama.backend.noches.TextoDeExpediente;
 
 /**
  * Los hechos que se le pasan a cada agente, sacados de la base en el momento.
@@ -36,11 +46,13 @@ public class Recolectores {
     private final JdbcClient sql;
     private final Crm crm;
     private final ModeloDeDemanda modelo;
+    private final ExpedienteDeNoche expedientes;
 
-    public Recolectores(JdbcClient sql, Crm crm, ModeloDeDemanda modelo) {
+    public Recolectores(JdbcClient sql, Crm crm, ModeloDeDemanda modelo, ExpedienteDeNoche expedientes) {
         this.sql = sql;
         this.crm = crm;
         this.modelo = modelo;
+        this.expedientes = expedientes;
     }
 
     // ── Piezas compartidas ────────────────────────────────────────
@@ -387,53 +399,255 @@ public class Recolectores {
 
     // ── Informe post-evento ───────────────────────────────────────
 
+    /**
+     * La última noche celebrada, con su expediente completo.
+     *
+     * <p>Antes el informe recibía nueve cifras sueltas (taquilla, barra,
+     * gastos…). Ahora recibe lo mismo que ve la jefatura de sala en el panel:
+     * asistencia por hora, cada barra y cada caja, promotores, costes de
+     * personal, incidencias y la comparación con noches parecidas. Con nueve
+     * cifras el modelo solo podía repetirlas; con el expediente puede explicar
+     * el porqué.
+     *
+     * <p>«Celebrada» es que ya empezó y que entró alguien: una noche sin un solo
+     * acceso no tiene nada que contar.
+     */
     public Optional<String> informe() {
-        Optional<Noche> ultima = sql.sql(SELECT_NOCHE + """
-                where e."empiezaEn" < %s order by e."empiezaEn" desc limit 1
-                """.formatted(AHORA))
-                .query(Recolectores::noche)
+        return sql.sql("""
+                        select e.slug from "Evento" e
+                        where e."empiezaEn" < %s and e.estado <> 'CANCELADO'
+                          and exists (select 1 from "Acceso" a where a."eventoId" = e.id)
+                        order by e."empiezaEn" desc limit 1
+                        """.formatted(AHORA))
+                .query(String.class)
+                .optional()
+                .flatMap(this::informe);
+    }
+
+    /** El expediente de una noche concreta, para pedir su informe desde su ficha. */
+    public Optional<String> informe(String slug) {
+        return expedientes.de(slug).map(TextoDeExpediente::de);
+    }
+
+    // ── Programador de noches ─────────────────────────────────────
+
+    /** Cuántas semanas por delante mira el programador. */
+    static final int SEMANAS_A_PROGRAMAR = 5;
+
+    private static final Set<DayOfWeek> DIAS_DE_APERTURA =
+            EnumSet.of(DayOfWeek.THURSDAY, DayOfWeek.FRIDAY, DayOfWeek.SATURDAY);
+
+    private static final DateTimeFormatter DIA_DE_SEMANA =
+            DateTimeFormatter.ofPattern("EEEE", Locale.forLanguageTag("es-PE"));
+
+    /** Una noche ya celebrada, con lo que dio de sí. */
+    record Celebrada(String id, String titulo, LocalDate noche, int asistentes, long taquilla, long barra) {}
+
+    /**
+     * Lo que necesita el programador para proponer noches: qué fechas quedan
+     * libres, qué ha funcionado cada día de la semana, qué géneros y artistas
+     * llenan, qué entradas se suelen poner y qué fechas especiales vienen.
+     *
+     * <p>Las fechas libres se le dan hechas, como lista cerrada: si se le deja
+     * calcularlas, propone un sábado que ya tiene noche o un martes cualquiera.
+     */
+    public Optional<String> programacion() {
+        record SalaPrincipal(String nombre, int aforo) {}
+        Optional<SalaPrincipal> sala = sql.sql("select nombre, aforo from \"Sala\" order by aforo desc limit 1")
+                .query((rs, n) -> new SalaPrincipal(rs.getString(1), rs.getInt(2)))
                 .optional();
-        if (ultima.isEmpty()) return Optional.empty();
-        Noche n = ultima.get();
+        if (sala.isEmpty()) return Optional.empty();
+        int aforo = sala.get().aforo();
 
-        long taquilla = sql.sql("""
-                select coalesce(sum("totalCentimos"), 0) from "Pedido"
-                where "eventoId" = :id and estado = 'PAGADO'
-                """).param("id", n.id()).query(Long.class).single();
-        long pedidos = sql.sql("""
-                select count(*) from "Pedido" where "eventoId" = :id and estado = 'PAGADO'
-                """).param("id", n.id()).query(Long.class).single();
-        long barra = sql.sql("""
-                select coalesce(sum("totalCentimos"), 0) from "VentaBarra" where "eventoId" = :id
-                """).param("id", n.id()).query(Long.class).single();
-        long gastos = sql.sql("""
-                select coalesce(sum("importeCentimos"), 0) from "Gasto" where "eventoId" = :id
-                """).param("id", n.id()).query(Long.class).single();
-        String top = sql.sql("""
-                select p.nombre, sum(l.cantidad) as unidades
-                from "LineaVentaBarra" l
-                join "VentaBarra" v on v.id = l."ventaBarraId"
-                join "Producto" p on p.id = l."productoId"
-                where v."eventoId" = :id
-                group by p.nombre order by unidades desc limit 5
+        LocalDate hoy = LocalDate.now(Club.ZONA);
+        LocalDate hasta = hoy.plusWeeks(SEMANAS_A_PROGRAMAR);
+        List<String> lineas = new ArrayList<>();
+
+        lineas.add("Sala: " + sala.get().nombre() + ", aforo " + aforo + " personas. Abre de jueves a sábado "
+                + "y vísperas de feriado; puertas a las 21:00 y cierre entre las 02:00 y las 04:00.");
+        lineas.add("Edad mínima de la casa: " + Club.EDAD_MINIMA + " años.");
+        lineas.add("");
+
+        // Lo ya programado (sin contar lo cancelado): esas fechas no están libres.
+        Map<LocalDate, String> ocupadas = new TreeMap<>();
+        sql.sql("""
+                select titulo, "empiezaEn", estado::text as estado from "Evento"
+                where estado <> 'CANCELADO' and "empiezaEn" >= :desde and "empiezaEn" < :hasta
                 """)
-                .param("id", n.id())
-                .query((rs, i) -> rs.getString(1) + " (" + rs.getInt(2) + ")")
+                .param("desde", LocalDateTime.ofInstant(hoy.atStartOfDay(Club.ZONA).toInstant(), ZoneOffset.UTC))
+                .param("hasta", LocalDateTime.ofInstant(hasta.plusDays(2).atStartOfDay(Club.ZONA).toInstant(), ZoneOffset.UTC))
+                .query((rs, n) -> Map.entry(Club.nocheDe(instante(rs, "empiezaEn")),
+                        rs.getString("titulo") + " (" + rs.getString("estado").toLowerCase(Locale.ROOT) + ")"))
                 .list()
-                .stream()
-                .collect(Collectors.joining(", "));
-        String artistas = cartel(n.id()).stream().map(Artista::nombre).collect(Collectors.joining(", "));
+                .forEach(e -> ocupadas.merge(e.getKey(), e.getValue(), (a, b) -> a + "; " + b));
 
-        return Optional.of(String.join("\n",
-                "Evento: " + n.titulo() + " (" + Club.fechaLarga(n.empieza()) + ", " + n.sala() + ", aforo " + n.aforo() + ")",
-                "Cartel: " + (artistas.isEmpty() ? "sin cartel" : artistas),
-                "Entradas vendidas: " + vendidas(n.id()) + " en " + pedidos + " pedidos",
-                "Personas que entraron: " + entraron(n.id()),
-                "Ingresos por entradas: " + Club.soles(taquilla),
-                "Ingresos de barra: " + Club.soles(barra),
-                "Gastos del evento: " + Club.soles(gastos),
-                "Margen: " + Club.soles(taquilla + barra - gastos),
-                "Consumiciones más vendidas: " + (top.isEmpty() ? "sin ventas de barra registradas" : top)));
+        List<CalendarioPeru.Fecha> senaladas = CalendarioPeru.entre(hoy, hasta.plusDays(1));
+        Map<LocalDate, List<CalendarioPeru.Fecha>> porDia = senaladas.stream()
+                .collect(Collectors.groupingBy(CalendarioPeru.Fecha::dia, TreeMap::new, Collectors.toList()));
+
+        lineas.add("Fechas libres en las próximas " + SEMANAS_A_PROGRAMAR + " semanas (elige solo de aquí):");
+        int libres = 0;
+        for (LocalDate d = hoy.plusDays(1); !d.isAfter(hasta); d = d.plusDays(1)) {
+            List<CalendarioPeru.Fecha> manana = porDia.getOrDefault(d.plusDays(1), List.of());
+            List<CalendarioPeru.Fecha> deHoy = porDia.getOrDefault(d, List.of());
+            boolean vispera = manana.stream().anyMatch(CalendarioPeru.Fecha::feriado);
+            boolean fiesta = deHoy.stream().anyMatch(f -> !f.feriado());
+            if (!DIAS_DE_APERTURA.contains(d.getDayOfWeek()) && !vispera && !fiesta) continue;
+            if (ocupadas.containsKey(d)) continue;
+
+            StringBuilder linea = new StringBuilder("- " + d + " (" + DIA_DE_SEMANA.format(d) + ")");
+            if (vispera) {
+                linea.append(" · víspera de feriado: ").append(manana.stream()
+                        .filter(CalendarioPeru.Fecha::feriado).map(CalendarioPeru.Fecha::nombre)
+                        .collect(Collectors.joining(", ")));
+            }
+            deHoy.forEach(f -> linea.append(" · ").append(f.nombre()).append(f.feriado() ? " (feriado)" : ""));
+            lineas.add(linea.toString());
+            libres++;
+        }
+        if (libres == 0) return Optional.empty();
+
+        lineas.add("");
+        lineas.add("Ya programado en ese periodo (no propongas nada esos días):");
+        if (ocupadas.isEmpty()) lineas.add("- Nada todavía.");
+        ocupadas.forEach((d, t) -> lineas.add("- " + d + " (" + DIA_DE_SEMANA.format(d) + "): " + t));
+
+        List<Celebrada> celebradas = celebradas();
+        Map<String, Integer> asistentesPorNoche = celebradas.stream()
+                .collect(Collectors.toMap(Celebrada::id, Celebrada::asistentes));
+
+        lineas.add("");
+        lineas.add("Cómo funciona cada día de la semana (" + celebradas.size() + " noches celebradas):");
+        if (celebradas.isEmpty()) lineas.add("- Sin histórico todavía.");
+        celebradas.stream()
+                .collect(Collectors.groupingBy(c -> c.noche().getDayOfWeek(), TreeMap::new, Collectors.toList()))
+                .forEach((dia, noches) -> {
+                    double asistentes = noches.stream().mapToInt(Celebrada::asistentes).average().orElse(0);
+                    String mejores = noches.stream()
+                            .sorted(Comparator.comparingInt(Celebrada::asistentes).reversed())
+                            .limit(2)
+                            .map(c -> "«" + c.titulo() + "» (" + c.asistentes() + ")")
+                            .collect(Collectors.joining(", "));
+                    lineas.add("- " + DIA_DE_SEMANA.format(dia) + ": " + noches(noches.size()) + ", "
+                            + Math.round(asistentes) + " asistentes de media (" + Math.round(asistentes * 100 / aforo)
+                            + "% del aforo), taquilla media "
+                            + Club.soles(Math.round(noches.stream().mapToLong(Celebrada::taquilla).average().orElse(0)))
+                            + ", barra media "
+                            + Club.soles(Math.round(noches.stream().mapToLong(Celebrada::barra).average().orElse(0)))
+                            + ". Las que más llenaron: " + mejores + ".");
+                });
+
+        // El cartel de todas las noches, el cabeza primero: da el género de cada noche y la cuenta de cada artista.
+        record EnCartel(String eventoId, String artista, String genero, boolean cabeza) {}
+        List<EnCartel> carteles = sql.sql("""
+                select ea."eventoId", a.nombre, a.genero, ea."cabezaCartel"
+                from "EventoArtista" ea join "Artista" a on a.id = ea."artistaId"
+                order by ea."eventoId", ea."cabezaCartel" desc, a.nombre
+                """)
+                .query((rs, n) -> new EnCartel(rs.getString(1), rs.getString(2), rs.getString(3), rs.getBoolean(4)))
+                .list();
+
+        Map<String, String> generoDeLaNoche = new HashMap<>();
+        carteles.stream().filter(c -> c.genero() != null)
+                .forEach(c -> generoDeLaNoche.putIfAbsent(c.eventoId(), c.genero()));
+
+        lineas.add("");
+        lineas.add("Género del cabeza de cartel y asistencia media:");
+        Map<String, List<Integer>> porGenero = new TreeMap<>();
+        celebradas.forEach(c -> {
+            String genero = generoDeLaNoche.get(c.id());
+            if (genero != null) porGenero.computeIfAbsent(genero, g -> new ArrayList<>()).add(c.asistentes());
+        });
+        if (porGenero.isEmpty()) lineas.add("- Sin datos.");
+        porGenero.entrySet().stream()
+                .sorted(Comparator.comparingDouble((Map.Entry<String, List<Integer>> e) ->
+                        e.getValue().stream().mapToInt(Integer::intValue).average().orElse(0)).reversed())
+                .forEach(e -> lineas.add("- " + e.getKey() + ": " + noches(e.getValue().size()) + ", "
+                        + Math.round(e.getValue().stream().mapToInt(Integer::intValue).average().orElse(0))
+                        + " asistentes de media."));
+
+        lineas.add("");
+        lineas.add("Artistas del catálogo (usa estos nombres exactos; el primero de cada noche es el cabeza):");
+        Map<String, List<EnCartel>> porArtista = carteles.stream()
+                .collect(Collectors.groupingBy(EnCartel::artista));
+        Map<String, LocalDate> ultimaNoche = new HashMap<>();
+        celebradas.forEach(c -> carteles.stream().filter(e -> e.eventoId().equals(c.id()))
+                .forEach(e -> ultimaNoche.merge(e.artista(), c.noche(), (a, b) -> a.isAfter(b) ? a : b)));
+        sql.sql("select nombre, genero from \"Artista\" order by nombre")
+                .query((rs, n) -> Map.entry(rs.getString(1), String.valueOf(rs.getString(2))))
+                .list()
+                .forEach(a -> {
+                    List<Integer> suyas = porArtista.getOrDefault(a.getKey(), List.of()).stream()
+                            .map(e -> asistentesPorNoche.get(e.eventoId()))
+                            .filter(x -> x != null)
+                            .toList();
+                    String historia = suyas.isEmpty()
+                            ? "todavía no ha tocado en la casa"
+                            : noches(suyas.size()) + ", " + Math.round(suyas.stream().mapToInt(Integer::intValue)
+                                    .average().orElse(0)) + " asistentes de media, la última el "
+                                    + Club.fechaLarga(ultimaNoche.get(a.getKey()));
+                    lineas.add("- " + a.getKey() + " (" + a.getValue() + "): " + historia + ".");
+                });
+
+        lineas.add("");
+        lineas.add("Entradas que se suelen poner (plantillas reales, precios en céntimos):");
+        List<String> plantillas = sql.sql("""
+                select t.nombre, count(*) as veces,
+                       mode() within group (order by t."precioCentimos") as precio,
+                       percentile_disc(0.5) within group (order by t.cantidad) as cupo,
+                       sum(t.vendidas) as vendidas, sum(t.cantidad) as ofertadas,
+                       mode() within group (order by t.descripcion) as descripcion
+                from "TipoEntrada" t join "Evento" e on e.id = t."eventoId"
+                where e."empiezaEn" < %s
+                group by t.nombre order by veces desc limit 12
+                """.formatted(AHORA))
+                .query((rs, n) -> "- «" + rs.getString("nombre") + "»: puesta " + rs.getInt("veces")
+                        + " veces, normalmente a " + rs.getLong("precio") + " céntimos, cupo típico " + rs.getInt("cupo")
+                        + ", se vende el " + (rs.getLong("ofertadas") == 0 ? 0
+                                : Math.round(rs.getLong("vendidas") * 100.0 / rs.getLong("ofertadas")))
+                        + "% de lo puesto" + (rs.getString("descripcion") == null ? "" : " (" + rs.getString("descripcion") + ")")
+                        + ".")
+                .list();
+        if (plantillas.isEmpty()) lineas.add("- Sin histórico.");
+        lineas.addAll(plantillas);
+
+        lineas.add("");
+        lineas.add("Títulos que ha usado la casa (es el estilo a seguir):");
+        lineas.add("- " + celebradas.stream().map(Celebrada::titulo).distinct().limit(15)
+                .collect(Collectors.joining("; ")));
+
+        lineas.add("");
+        lineas.add("Promociones de la casa que puedes mencionar:");
+        Club.PROMOCIONES.forEach(p -> lineas.add("- " + p));
+
+        return Optional.of(String.join("\n", lineas));
+    }
+
+    private static String noches(int n) {
+        return n == 1 ? "1 noche" : n + " noches";
+    }
+
+    /** Las noches ya celebradas con gente dentro, de la más reciente a la más antigua. */
+    List<Celebrada> celebradas() {
+        return sql.sql("""
+                select e.id, e.titulo, e."empiezaEn",
+                       (select count(*) from "Acceso" a where a."eventoId" = e.id) as asistentes,
+                       (select coalesce(sum(p."totalCentimos"), 0) from "Pedido" p
+                         where p."eventoId" = e.id and p.estado = 'PAGADO') as taquilla,
+                       (select coalesce(sum(v."totalCentimos"), 0) from "VentaBarra" v
+                         where v."eventoId" = e.id) as barra
+                from "Evento" e
+                where e."empiezaEn" < %s and exists (select 1 from "Acceso" a where a."eventoId" = e.id)
+                order by e."empiezaEn" desc
+                """.formatted(AHORA))
+                .query((rs, n) -> new Celebrada(
+                        rs.getString("id"),
+                        rs.getString("titulo"),
+                        Club.nocheDe(instante(rs, "empiezaEn")),
+                        rs.getInt("asistentes"),
+                        rs.getLong("taquilla"),
+                        rs.getLong("barra")))
+                .list();
     }
 
     // ── Utilidades ────────────────────────────────────────────────

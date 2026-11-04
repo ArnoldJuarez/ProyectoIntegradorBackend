@@ -6,6 +6,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
+import pe.ssiomama.backend.auth.PersonalRechazado;
 import pe.ssiomama.backend.caja.CajaRechazada;
 import pe.ssiomama.backend.clientes.CrmRechazado;
 import pe.ssiomama.backend.entradas.CompraRechazada;
@@ -13,7 +14,12 @@ import pe.ssiomama.backend.eventos.EventoRechazado;
 import pe.ssiomama.backend.ia.AgenteSinDatos;
 import pe.ssiomama.backend.ia.IaNoDisponible;
 import pe.ssiomama.backend.ia.IaSinFormato;
+import pe.ssiomama.backend.gastos.GastoRechazado;
 import pe.ssiomama.backend.inventario.AlmacenRechazado;
+import pe.ssiomama.backend.noches.NocheRechazada;
+import pe.ssiomama.backend.promotores.ComisionRechazada;
+import pe.ssiomama.backend.promotores.ListaRechazada;
+import pe.ssiomama.backend.reservados.ReservaRechazada;
 
 /**
  * Da a los errores de la API una forma única: {@code {"error": "..."}}.
@@ -120,6 +126,42 @@ public class ManejadorDeErrores {
      */
     @ExceptionHandler(CrmRechazado.class)
     public ResponseEntity<Problema> deCrm(CrmRechazado e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new Problema(e.getMessage()));
+    }
+
+    /** Un cambio en el personal que no se admite: correo repetido, quitarse el acceso a uno mismo. */
+    @ExceptionHandler(PersonalRechazado.class)
+    public ResponseEntity<Problema> dePersonal(PersonalRechazado e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new Problema(e.getMessage()));
+    }
+
+    /** Una reserva de box que el negocio no admite: el box está pedido, no caben, el paso no existe. */
+    @ExceptionHandler(ReservaRechazada.class)
+    public ResponseEntity<Problema> deReserva(ReservaRechazada e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new Problema(e.getMessage()));
+    }
+
+    /** Un gasto que no se puede apuntar o tocar: importe en cero, categoría que no existe. */
+    @ExceptionHandler(GastoRechazado.class)
+    public ResponseEntity<Problema> deGasto(GastoRechazado e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new Problema(e.getMessage()));
+    }
+
+    /** Una lista de invitados que no admite el cambio: está llena, la noche ya pasó, ya entró alguien. */
+    @ExceptionHandler(ListaRechazada.class)
+    public ResponseEntity<Problema> deLista(ListaRechazada e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new Problema(e.getMessage()));
+    }
+
+    /** Una incidencia o unas notas de cierre que no se pueden guardar. */
+    @ExceptionHandler(NocheRechazada.class)
+    public ResponseEntity<Problema> deNoche(NocheRechazada e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new Problema(e.getMessage()));
+    }
+
+    /** Una liquidación de promotor que no procede: no hay nada pendiente, ya estaba anulada. */
+    @ExceptionHandler(ComisionRechazada.class)
+    public ResponseEntity<Problema> deComision(ComisionRechazada e) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new Problema(e.getMessage()));
     }
 

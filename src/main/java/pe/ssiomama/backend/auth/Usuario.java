@@ -97,8 +97,58 @@ public class Usuario {
     @Column(name = "comisionPct")
     private Integer comisionPorcentaje;
 
+    /**
+     * Lo que se le paga por cada persona de sus listas que entra de verdad.
+     * Cero si solo cobra porcentaje.
+     */
+    @Column(name = "bonoInvitadoCentimos", nullable = false)
+    private int bonoPorInvitadoCentimos;
+
     protected Usuario() {
         // Hibernate necesita un constructor sin argumentos.
+    }
+
+    /** Alguien nuevo en el equipo, activo desde hoy. Sin correo ni clave no podrá entrar al sistema. */
+    static Usuario alta(String nombre, Rol rol, LocalDate fechaDeAlta) {
+        Usuario u = new Usuario();
+        u.id = java.util.UUID.randomUUID().toString();
+        u.nombre = nombre.trim();
+        u.rol = rol;
+        u.activo = true;
+        u.creadoEn = Instant.now();
+        u.fechaDeAlta = fechaDeAlta;
+        return u;
+    }
+
+    /** Cambia la ficha. La clave va aparte: nunca viaja con el resto del formulario. */
+    void actualizar(
+            String nombre,
+            String email,
+            Rol rol,
+            boolean activo,
+            Puesto puesto,
+            int sueldoPorHoraCentimos,
+            String codigoDePromotor,
+            Integer comisionPorcentaje) {
+        this.nombre = nombre.trim();
+        this.email = email == null || email.isBlank() ? null : email.trim().toLowerCase(java.util.Locale.ROOT);
+        this.rol = rol;
+        this.activo = activo;
+        this.puesto = puesto;
+        this.sueldoPorHoraCentimos = sueldoPorHoraCentimos;
+        this.codigoDePromotor = codigoDePromotor == null || codigoDePromotor.isBlank()
+                ? null
+                : codigoDePromotor.trim().toUpperCase(java.util.Locale.ROOT);
+        this.comisionPorcentaje = this.codigoDePromotor == null ? null : comisionPorcentaje;
+    }
+
+    /** Va aparte de {@link #actualizar} para no tocar a quien ya lo llama. Sin código de promotor, cero. */
+    void cambiarBonoPorInvitado(int centimos) {
+        this.bonoPorInvitadoCentimos = esPromotor() ? Math.max(0, centimos) : 0;
+    }
+
+    void cambiarHashDeContrasena(String hash) {
+        this.hashDeContrasena = hash;
     }
 
     /** ¿Puede iniciar sesión? Solo quien tiene correo y contraseña. */
@@ -157,5 +207,9 @@ public class Usuario {
 
     public Integer getComisionPorcentaje() {
         return comisionPorcentaje;
+    }
+
+    public int getBonoPorInvitadoCentimos() {
+        return bonoPorInvitadoCentimos;
     }
 }

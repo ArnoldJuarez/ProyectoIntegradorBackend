@@ -10,4 +10,7 @@ public interface UsuarioRepository extends JpaRepository<Usuario, String> {
      * mayúsculas: nadie recuerda si se registró como Admin@ o admin@.
      */
     Optional<Usuario> findByEmailIgnoreCase(String email);
+
+    /** El promotor de un código. Los códigos se guardan en mayúsculas. */
+    Optional<Usuario> findByCodigoDePromotor(String codigo);
 }

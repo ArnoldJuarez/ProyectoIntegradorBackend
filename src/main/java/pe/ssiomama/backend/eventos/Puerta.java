@@ -67,6 +67,10 @@ public class Puerta {
     @Column(name = "ancho", nullable = false)
     private double ancho;
 
+    /** En qué planta está. Las de la planta alta son escaleras de emergencia. */
+    @Column(name = "piso", nullable = false)
+    private int piso;
+
     protected Puerta() {
         // Hibernate necesita un constructor sin argumentos.
     }
@@ -115,6 +119,17 @@ public class Puerta {
         this.ancho = ancho;
         this.caudalPorMinuto = caudalPorMinuto;
         this.esSalidaEmergencia = esSalidaEmergencia;
+    }
+
+    /** Igual, cambiando también de planta. */
+    public void dibujar(
+            double x, double y, double ancho, int caudalPorMinuto, boolean esSalidaEmergencia, int piso) {
+        dibujar(x, y, ancho, caudalPorMinuto, esSalidaEmergencia);
+        this.piso = piso;
+    }
+
+    public int getPiso() {
+        return piso;
     }
 
     /** ¿Se puede escanear por aquí? Solo las abiertas que no son de evacuación. */

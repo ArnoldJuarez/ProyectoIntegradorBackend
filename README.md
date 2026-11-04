@@ -8,7 +8,7 @@ agentes de IA) y las dos pantallas de turno (puerta y barra).
 El frontend que la consume vive en **otro repositorio**: `ssiomama-frontend`.
 
 ```
-Spring Boot 3.5.3 · Java 21 · PostgreSQL 18 · Flyway · 317 tests
+Spring Boot 3.5.3 · Java 21 · PostgreSQL 18 · Flyway · 365 tests
 ```
 
 ## Qué hace falta instalado
@@ -93,7 +93,7 @@ Prisma.
 Las migraciones están en `src/main/resources/db/migration/` y se aplican solas
 al arrancar:
 
-- `V1__esquema_inicial.sql` — el esquema heredado: 43 tablas, 20 tipos enum, 109
+- `V1__esquema_inicial.sql` — el esquema heredado: 38 tablas, 21 tipos enum, 109
   restricciones y 74 índices. Sobre una base que ya las tiene **no se ejecuta**:
   Flyway la adopta marcándola como versión 1 (`baseline-on-migrate`). Sobre una
   base vacía sí se ejecuta y deja el esquema completo.
@@ -136,8 +136,21 @@ python datos/generar_datos.py
 psql -U postgres -d discoteca -1 -v ON_ERROR_STOP=1 -f datos/poblar.sql
 ```
 
-`poblar.sql` y el respaldo no van a git (el respaldo lleva datos de clientes
-reales); el generador sí.
+Una **segunda tanda**, `datos/generar_noviembre.py`, pone la base al día a 4 de
+noviembre de 2026: celebra y cierra las siete noches de octubre que quedaron a
+la venta (accesos, venta en puerta, barra con su caja, turnos, gastos e
+incidencias), repone el almacén, añade tres productos y programa noviembre y
+diciembre hasta Año Nuevo con su preventa. Deja jueves libres y algún producto
+corto a propósito, para que el programador y el agente de inventario tengan algo
+que proponer. Va después de la primera y también se niega si ya se aplicó:
+
+```bash
+python datos/generar_noviembre.py
+psql -U postgres -d discoteca -1 -v ON_ERROR_STOP=1 -f datos/poblar-noviembre.sql
+```
+
+`poblar.sql`, `poblar-noviembre.sql` y los respaldos no van a git (llevan datos
+de clientes reales); los generadores sí.
 
 ### Aviso sobre el proyecto anterior
 
@@ -152,7 +165,7 @@ congelado; si hay que tocarlo, que sea sin `db push`.
 ./mvnw test
 ```
 
-Son 317. Conviene saber qué protege cada grupo antes de tocarlos:
+Son 365, en 48 clases. Conviene saber qué protege cada grupo antes de tocarlos:
 
 | Test | Qué protege |
 |---|---|
@@ -194,7 +207,7 @@ operativo. `EventoRepositoryTest` comprueba un instante concreto por eso.
 
 **Al filtrar por un enum, nunca pongas el literal en el HQL.** Hibernate genera
 el cast con el nombre de la clase Java (`::EstadoDeEvento`) y el tipo en la base
-se llama `EventStatus`. Los valores van siempre como parámetro.
+se llama `EstadoEvento`. Los valores van siempre como parámetro.
 
 ## Estado
 
@@ -206,9 +219,35 @@ se llama `EventStatus`. Los valores van siempre como parámetro.
   carpeta `portadas/` (fuera de git; se cambia con `CARPETA_PORTADAS`).
 - **El local** (`/api/local`): medidas, zonas y puertas de cada sala. La
   evacuación se calcula en el navegador.
-- **IA** (`/api/ia/**` y `/api/publico/chat`): seis agentes que dejan
+- **IA** (`/api/ia/**` y `/api/publico/chat`): siete agentes que dejan
   propuestas, la aprobación humana que las aplica, métricas y el conserje.
-  Ningún agente toca datos sin que alguien pulse «Aprobar».
+  Ningún agente toca datos sin que alguien pulse «Aprobar». El séptimo, el
+  **programador de noches**, propone noches completas que se pueden retocar
+  antes de aprobar y se crean en borrador.
+
+### Gestión a mano
+
+Todo lo que propone la IA se puede hacer también a mano:
+
+- **Video de la noche** (`/api/eventos/{slug}/video`): MP4/WebM hasta 80 MB,
+  comprobado por su cabecera y servido por rangos; o un enlace https.
+- **Borrar noches** sin historia (`DELETE /api/eventos/{slug}`).
+- **Artistas** (`/api/artistas`): catálogo con foto.
+- **Pedidos a proveedor y proveedores** (`/api/inventario/ordenes`,
+  `/proveedores`): recibir un pedido suma el stock.
+- **Reservas de box** (`/api/reservas`), **gastos** (`/api/gastos`),
+  **listas de invitados** (`/api/promotores/listas`) y **personal**
+  (`/api/personal`, solo dirección).
+
+La migración `V2` añade la columna del video y los valores de enum del
+programador.
+
+### Documentación
+
+El vault de Obsidian completo (requisitos, casos de uso, arquitectura, UML,
+BPMN, diccionario de datos, API y una nota por clase) está en
+`../documentacion`. La parte que sale del código se regenera con
+`python ../documentacion/_herramientas/generar.py`.
 
 Las tablas de la IA se escriben con SQL a mano (`RegistroDeIa`) y no con JPA:
 sus enum tienen etiquetas con guiones (`crm-segmenter`) que Hibernate no sabe

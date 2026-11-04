@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.util.UUID;
 import pe.ssiomama.backend.eventos.Sala;
 import pe.ssiomama.backend.auth.Usuario;
+import pe.ssiomama.backend.personal.Puesto;
 
 /**
  * Una sesión de caja, de que se abre hasta que se cuadra — tabla
@@ -50,6 +51,14 @@ public class ArqueoDeCaja {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "salaId", nullable = false)
     private Sala sala;
+
+    /**
+     * En qué barra se trabajó. Nulo solo en turnos viejos que no se pudieron
+     * atribuir. Es lo que permite decir cuánto vendió cada barra en una noche.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "puestoId")
+    private Puesto barra;
 
     /** Quién se hace responsable de esta caja. */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -95,7 +104,13 @@ public class ArqueoDeCaja {
      * efectivo lo va subiendo.
      */
     public static ArqueoDeCaja abrir(Sala sala, Usuario responsable, int fondoCentimos) {
+        return abrir(sala, null, responsable, fondoCentimos);
+    }
+
+    /** Igual, diciendo en qué barra. */
+    public static ArqueoDeCaja abrir(Sala sala, Puesto barra, Usuario responsable, int fondoCentimos) {
         ArqueoDeCaja a = new ArqueoDeCaja();
+        a.barra = barra;
         a.id = UUID.randomUUID().toString();
         a.sala = sala;
         a.responsable = responsable;
@@ -176,6 +191,11 @@ public class ArqueoDeCaja {
 
     public Sala getSala() {
         return sala;
+    }
+
+    /** Nulo en turnos viejos sin barra atribuida. */
+    public Puesto getBarra() {
+        return barra;
     }
 
     public Usuario getResponsable() {

@@ -162,6 +162,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/auth/yo").permitAll()
 
                         /*
+                         * El personal: altas, roles y contrasenas. Va antes que
+                         * el resto del panel y solo para direccion, porque quien
+                         * reparte roles puede darse cualquier permiso.
+                         */
+                        .requestMatchers("/api/personal/**")
+                        .hasAnyAuthority(autoridades(Rol.EQUIPO))
+
+                        /*
                          * El panel. Los clientes van aqui con mas motivo que el
                          * resto: son datos personales de gente real —nombres,
                          * correos, telefonos, cuanto se gastan— y no salen de
@@ -170,6 +178,12 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/inventario/**",
                                 "/api/eventos/**",
+                                // El catálogo de artistas que se elige al montar un cartel.
+                                "/api/artistas/**",
+                                // Las reservas de box: nombres y teléfonos de clientes.
+                                "/api/reservas/**",
+                                // Los gastos de la casa: dinero que sale.
+                                "/api/gastos/**",
                                 "/api/clientes/**",
                                 "/api/caja/**",
                                 "/api/pedidos/**",
@@ -213,6 +227,16 @@ public class SecurityConfig {
                          */
                         .requestMatchers("/api/barra/**")
                         .hasAnyAuthority(autoridades(Rol.EN_LA_BARRA))
+
+                        /*
+                         * La pantalla del propio promotor. Basta con tener
+                         * sesion: promotor no es un rol sino tener codigo, y hay
+                         * gente de barra o de puerta que ademas jala gente. El
+                         * controlador comprueba el codigo y solo devuelve lo de
+                         * quien pregunta, nunca lo de otro.
+                         */
+                        .requestMatchers("/api/mi-promotor/**")
+                        .authenticated()
 
                         .anyRequest().denyAll())
                 /*

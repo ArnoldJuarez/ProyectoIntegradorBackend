@@ -37,6 +37,27 @@ public class Puesto {
         // Hibernate necesita un constructor sin argumentos.
     }
 
+    /**
+     * Una barra nueva del local: la de la terraza, la del VIP.
+     *
+     * <p>Cada barra es un puesto porque es justo eso: un sitio donde alguien
+     * trabaja un turno. Y así sus ventas se pueden separar de las de otra barra
+     * la misma noche.
+     */
+    public static Puesto nuevaBarra(String nombre) {
+        Puesto p = new Puesto();
+        p.id = java.util.UUID.randomUUID().toString();
+        p.nombre = nombre.trim();
+        p.esDeBarra = true;
+        p.activo = true;
+        return p;
+    }
+
+    /** Una barra que ya no se monta. No se borra: sus turnos viejos la siguen nombrando. */
+    public void cambiarActivo(boolean activo) {
+        this.activo = activo;
+    }
+
     public String getId() {
         return id;
     }

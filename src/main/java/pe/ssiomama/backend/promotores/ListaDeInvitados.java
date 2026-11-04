@@ -50,6 +50,21 @@ public class ListaDeInvitados {
         // Hibernate necesita un constructor sin argumentos.
     }
 
+    static ListaDeInvitados abrir(Evento evento, Usuario promotor, String nombre, int maxInvitados) {
+        ListaDeInvitados l = new ListaDeInvitados();
+        l.id = java.util.UUID.randomUUID().toString();
+        l.evento = evento;
+        l.promotor = promotor;
+        l.nombre = nombre.trim();
+        l.maxInvitados = maxInvitados;
+        return l;
+    }
+
+    void cambiar(String nombre, int maxInvitados) {
+        this.nombre = nombre.trim();
+        this.maxInvitados = maxInvitados;
+    }
+
     /** Personas apuntadas: una fila «Ana +3» son cuatro. */
     public int apuntados() {
         return invitados.stream().mapToInt(Invitado::getPersonas).sum();

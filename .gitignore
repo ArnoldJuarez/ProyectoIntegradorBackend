@@ -19,6 +19,7 @@ portadas/
 # El generador sí va a git; lo que produce no: poblar.sql pesa 21 MB y se
 # regenera igual, y el respaldo lleva datos personales de clientes reales.
 datos/poblar.sql
+datos/poblar-noviembre.sql
 datos/*.dump
 
 # ── Maven ─────────────────────────────────────────────────────

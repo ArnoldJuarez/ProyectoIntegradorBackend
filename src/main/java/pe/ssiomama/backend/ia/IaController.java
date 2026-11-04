@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import pe.ssiomama.backend.auth.Usuario;
@@ -42,9 +43,15 @@ public class IaController {
     private final RegistroDeIa registro;
     private final AplicadorDePropuestas aplicador;
     private final MotoresDeIa motores;
+    private final Recolectores recolectores;
 
     public IaController(
-            Agentes agentes, RegistroDeIa registro, AplicadorDePropuestas aplicador, MotoresDeIa motores) {
+            Agentes agentes,
+            RegistroDeIa registro,
+            AplicadorDePropuestas aplicador,
+            MotoresDeIa motores,
+            Recolectores recolectores) {
+        this.recolectores = recolectores;
         this.agentes = agentes;
         this.registro = registro;
         this.aplicador = aplicador;
@@ -66,12 +73,27 @@ public class IaController {
                 .toList();
     }
 
-    /** Lanza un agente. Tarda lo que tarde el modelo: de segundos a un minuto. */
+    /**
+     * Lanza un agente. Tarda lo que tarde el modelo: de segundos a un minuto.
+     *
+     * @param noche solo para el informe: el slug de la noche a cerrar. Sin él,
+     *     la última celebrada.
+     */
     @PostMapping("/agentes/{clave}")
-    public Agentes.Resultado ejecutar(@PathVariable String clave, @AuthenticationPrincipal Usuario quien) {
+    public Agentes.Resultado ejecutar(
+            @PathVariable String clave,
+            @RequestParam(required = false) String noche,
+            @AuthenticationPrincipal Usuario quien) {
         ClaveDeAgente c = ClaveDeAgente.deEtiqueta(clave)
                 .filter(k -> k != ClaveDeAgente.CONSERJE)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No existe el agente «" + clave + "»."));
+
+        if (noche != null && !noche.isBlank()) {
+            if (c != ClaveDeAgente.INFORMES) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Solo el informe se pide para una noche concreta.");
+            }
+            return agentes.ejecutar(c, Disparador.MANUAL, quien.getId(), () -> recolectores.informe(noche));
+        }
         return agentes.ejecutar(c, Disparador.MANUAL, quien.getId());
     }
 
@@ -126,9 +148,18 @@ public class IaController {
         DESCARTAR
     }
 
-    public record DecisionSobrePropuesta(@NotNull(message = "Falta la decisión") Decision decision) {}
+    /**
+     * @param datos la propuesta retocada a mano antes de aprobarla, o nulo para
+     *     aprobarla tal cual. Tiene que conservar la forma que dio el agente.
+     */
+    public record DecisionSobrePropuesta(@NotNull(message = "Falta la decisión") Decision decision, JsonNode datos) {}
 
-    public record Desenlace(String estado, boolean aplicada, String mensaje, List<String> avisos) {}
+    public record Desenlace(
+            String estado,
+            boolean aplicada,
+            String mensaje,
+            List<String> avisos,
+            List<AplicadorDePropuestas.Enlace> enlaces) {}
 
     /**
      * Aprobar o descartar. Es la única puerta por la que lo que produce la IA
@@ -148,21 +179,41 @@ public class IaController {
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "No encontramos esa propuesta."));
 
         boolean aprobar = cuerpo.decision() == Decision.APROBAR;
+
+        // Lo retocado se comprueba contra el mismo esquema que se le exigió al
+        // modelo: la persona puede cambiar los valores, no la forma.
+        JsonNode datos = propuesta.datos();
+        boolean retocada = aprobar && cuerpo.datos() != null && !cuerpo.datos().isNull();
+        if (retocada) {
+            EsquemaJson esquema = ClaveDeAgente.deEtiqueta(propuesta.agente())
+                    .flatMap(agentes::definicion)
+                    .map(Agentes.Definicion::esquema)
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.CONFLICT, "Esta propuesta no se puede editar: aprúebala tal cual."));
+            esquema.problemaCon(cuerpo.datos()).ifPresent(problema -> {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "Lo editado no tiene la forma de la propuesta: " + problema);
+            });
+            datos = cuerpo.datos();
+        }
+
         if (!registro.revisar(id, aprobar ? "APROBADA" : "RECHAZADA", quien.getId())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Esa propuesta ya estaba revisada.");
         }
         if (!aprobar) {
-            return new Desenlace("RECHAZADA", false, "Propuesta descartada.", List.of());
+            return new Desenlace("RECHAZADA", false, "Propuesta descartada.", List.of(), List.of());
         }
+        if (retocada) registro.reemplazarDatos(id, datos);
 
         try {
-            var r = aplicador.aplicar(propuesta.tipo(), propuesta.datos(), propuesta.ejecucionId());
+            var r = aplicador.aplicar(propuesta.tipo(), datos, propuesta.ejecucionId());
             if (r.aplicada()) registro.marcarAplicada(id);
-            return new Desenlace("APROBADA", r.aplicada(), r.resumen(), r.avisos());
+            return new Desenlace("APROBADA", r.aplicada(), r.resumen(), r.avisos(), r.enlaces());
         } catch (RuntimeException e) {
             log.error("No se pudo aplicar la propuesta {}", id, e);
             return new Desenlace("APROBADA", false,
-                    "Aprobada, pero no se ha podido ejecutar. Revísalo a mano.", List.of(String.valueOf(e.getMessage())));
+                    "Aprobada, pero no se ha podido ejecutar. Revísalo a mano.",
+                    List.of(String.valueOf(e.getMessage())), List.of());
         }
     }
 

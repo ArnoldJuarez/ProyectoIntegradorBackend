@@ -68,4 +68,8 @@ public interface TipoDeEntradaRepository extends JpaRepository<TipoDeEntrada, St
     /** Un tipo con su evento ya cargado. */
     @Query("select t from TipoDeEntrada t join fetch t.evento where t.id = :id")
     Optional<TipoDeEntrada> buscarConEvento(@Param("id") String id);
+
+    /** Todos los tipos de una noche, como entidades: para borrarlos con ella. */
+    @Query("select t from TipoDeEntrada t where t.evento.id = :eventoId")
+    List<TipoDeEntrada> buscarDeLaNoche(@Param("eventoId") String eventoId);
 }

@@ -9,7 +9,7 @@ import jakarta.persistence.Table;
  * A quién se le compra la mercancía — tabla {@code "Supplier"}.
  *
  * <p>Solo lleva los datos de contacto. Los pedidos que se le hacen viven en
- * {@code PurchaseOrder}, que todavía no está migrado.
+ * {@link OrdenDeCompra}.
  */
 @Entity
 @Table(name = "Proveedor")
@@ -34,6 +34,24 @@ public class Proveedor {
 
     protected Proveedor() {
         // Hibernate necesita un constructor sin argumentos.
+    }
+
+    static Proveedor crear(String nombre, String personaDeContacto, String email, String telefono) {
+        Proveedor p = new Proveedor();
+        p.id = java.util.UUID.randomUUID().toString();
+        p.actualizar(nombre, personaDeContacto, email, telefono);
+        return p;
+    }
+
+    void actualizar(String nombre, String personaDeContacto, String email, String telefono) {
+        this.nombre = nombre.trim();
+        this.personaDeContacto = vacioANulo(personaDeContacto);
+        this.email = vacioANulo(email);
+        this.telefono = vacioANulo(telefono);
+    }
+
+    private static String vacioANulo(String valor) {
+        return valor == null || valor.isBlank() ? null : valor.trim();
     }
 
     public String getId() {

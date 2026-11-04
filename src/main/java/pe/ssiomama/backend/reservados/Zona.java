@@ -71,6 +71,10 @@ public class Zona {
     @Column(name = "tono", nullable = false)
     private int tono;
 
+    /** En qué planta está: 0 la baja, 1 la alta. */
+    @Column(name = "piso", nullable = false)
+    private int piso;
+
     protected Zona() {
         // Hibernate necesita un constructor sin argumentos.
     }
@@ -123,6 +127,10 @@ public class Zona {
         return tono;
     }
 
+    public int getPiso() {
+        return piso;
+    }
+
     /** Cambia dónde está y qué es. El nombre y el orden no se tocan desde el plano. */
     public void dibujar(
             TipoDeZona tipo, double x, double y, double ancho, double fondo, double alto, int aforo) {
@@ -133,5 +141,12 @@ public class Zona {
         this.fondo = fondo;
         this.alto = alto;
         this.aforo = aforo;
+    }
+
+    /** Igual, cambiando también de planta. */
+    public void dibujar(
+            TipoDeZona tipo, double x, double y, double ancho, double fondo, double alto, int aforo, int piso) {
+        dibujar(tipo, x, y, ancho, fondo, alto, aforo);
+        this.piso = piso;
     }
 }

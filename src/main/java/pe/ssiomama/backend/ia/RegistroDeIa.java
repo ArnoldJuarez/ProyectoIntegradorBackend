@@ -181,6 +181,20 @@ public class RegistroDeIa {
                 .update() == 1;
     }
 
+    /**
+     * Sustituye lo propuesto por lo que la persona dejó tras retocarlo.
+     *
+     * <p>Lo que propuso el modelo no se pierde: sigue tal cual en la salida de su
+     * ejecución ({@code EjecucionAgente.salida}). Así se puede comparar lo que
+     * dijo la IA con lo que se aprobó de verdad.
+     */
+    public void reemplazarDatos(String id, JsonNode datos) {
+        sql.sql("update \"PropuestaAgente\" set datos = cast(:datos as jsonb) where id = :id")
+                .param("id", id)
+                .param("datos", aJson(datos))
+                .update();
+    }
+
     public void marcarAplicada(String id) {
         sql.sql("update \"PropuestaAgente\" set \"aplicadaEn\" = %s where id = :id".formatted(AHORA))
                 .param("id", id)

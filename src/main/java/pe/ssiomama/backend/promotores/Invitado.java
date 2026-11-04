@@ -43,6 +43,21 @@ public class Invitado {
         // Hibernate necesita un constructor sin argumentos.
     }
 
+    static Invitado apuntar(ListaDeInvitados lista, String nombreCompleto, int personas) {
+        Invitado i = new Invitado();
+        i.id = java.util.UUID.randomUUID().toString();
+        i.lista = lista;
+        i.nombreCompleto = nombreCompleto.trim();
+        i.personas = personas;
+        return i;
+    }
+
+    /** Marca o desmarca la entrada. Desmarcar existe para el dedo que se equivocó de fila. */
+    void marcarEntrada(boolean entro, Instant cuando) {
+        this.entro = entro;
+        this.entroEn = entro ? cuando : null;
+    }
+
     public String getId() {
         return id;
     }

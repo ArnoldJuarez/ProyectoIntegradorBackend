@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import pe.ssiomama.backend.auth.Usuario;
 import pe.ssiomama.backend.caja.MetodoDePago;
 import pe.ssiomama.backend.clientes.Cliente;
 import pe.ssiomama.backend.eventos.Evento;
@@ -60,6 +61,17 @@ public class Pedido {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "eventoId", nullable = false)
     private Evento evento;
+
+    /**
+     * El promotor cuyo código trajo esta compra. Nulo si llegó sola.
+     *
+     * <p>Es lo que cuenta para su comisión. Se fija al abrir el pedido y no se
+     * cambia después: reasignar una venta a otro promotor es cambiar a quién se
+     * le debe dinero, y eso no se hace editando un pedido.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "promotorId")
+    private Usuario promotor;
 
     @Column(name = "subtotalCentimos", nullable = false)
     private int subtotalCentimos;
@@ -116,7 +128,14 @@ public class Pedido {
      */
     static Pedido abrir(
             String codigo, Cliente cliente, Evento evento, int comisionCentimos, Instant cuando) {
+        return abrir(codigo, cliente, evento, null, comisionCentimos, cuando);
+    }
+
+    /** Igual, con el promotor que trajo la compra (o nulo). */
+    static Pedido abrir(
+            String codigo, Cliente cliente, Evento evento, Usuario promotor, int comisionCentimos, Instant cuando) {
         Pedido p = new Pedido();
+        p.promotor = promotor;
         p.id = UUID.randomUUID().toString();
         p.codigo = codigo;
         p.cliente = cliente;
@@ -190,6 +209,11 @@ public class Pedido {
 
     public Evento getEvento() {
         return evento;
+    }
+
+    /** Nulo si la compra no llegó por ningún promotor. */
+    public Usuario getPromotor() {
+        return promotor;
     }
 
     public int getSubtotalCentimos() {

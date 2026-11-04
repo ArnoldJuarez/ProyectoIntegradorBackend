@@ -17,6 +17,7 @@ public enum ClaveDeAgente {
     INVENTARIO_ML("inventory-ml", "Inventario (con modelo)"),
     PRECIOS("pricing", "Precios"),
     INFORMES("reporter", "Informe post-evento"),
+    PROGRAMADOR("programmer", "Programador de noches"),
     CONSERJE("concierge", "Conserje");
 
     private final String etiqueta;

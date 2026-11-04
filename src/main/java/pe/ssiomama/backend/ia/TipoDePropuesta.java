@@ -6,7 +6,8 @@ public enum TipoDePropuesta {
     CAMPANIA("Campaña de CRM"),
     ORDEN_COMPRA("Pedido a proveedor"),
     CAMBIO_PRECIO("Cambio de precios"),
-    INFORME("Informe");
+    INFORME("Informe"),
+    EVENTO("Noches nuevas");
 
     private final String nombre;
 

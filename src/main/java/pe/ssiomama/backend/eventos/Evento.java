@@ -59,6 +59,13 @@ public class Evento {
     @Column(name = "imagenPortada")
     private String portada;
 
+    /**
+     * Un clip para la ficha pública: un archivo subido (ver {@link VideoController})
+     * o la dirección de un MP4 o de YouTube pegada a mano. Casi siempre nulo.
+     */
+    @Column(name = "video")
+    private String video;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "salaId", nullable = false)
     private Sala sala;
@@ -79,7 +86,7 @@ public class Evento {
     private String vestimenta;
 
     /**
-     * El tipo enum de PostgreSQL se llama {@code EventStatus}, no como esta
+     * El tipo enum de PostgreSQL se llama {@code EstadoEvento}, no como esta
      * clase.
      *
      * <p>Eso obliga a una regla al escribir consultas: <b>nunca poner un literal
@@ -220,6 +227,11 @@ public class Evento {
         this.portada = vacioANulo(url);
     }
 
+    /** El clip de la noche: una dirección pegada a mano o un video subido. */
+    void cambiarVideo(String url) {
+        this.video = vacioANulo(url);
+    }
+
     /** ¿Cambia la fecha respecto a la que ya tenía? */
     boolean cambiaLaFecha(Instant nuevaApertura) {
         return !puertasA.equals(nuevaApertura);
@@ -273,6 +285,10 @@ public class Evento {
 
     public String getPortada() {
         return portada;
+    }
+
+    public String getVideo() {
+        return video;
     }
 
     public Sala getSala() {

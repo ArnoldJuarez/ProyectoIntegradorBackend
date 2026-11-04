@@ -52,7 +52,9 @@ public class BarraController {
     public record Apertura(
             @Min(value = 0, message = "El fondo no puede ser negativo")
             @Max(value = 10_000_000, message = "Ese fondo no parece real")
-            int fondoCentimos) {}
+            int fondoCentimos,
+            /** En qué barra. Vacío: la de su puesto, o la única que haya. */
+            String barraId) {}
 
     public record Cierre(
             @NotBlank(message = "Falta la caja") String arqueoId,
@@ -107,6 +109,8 @@ public class BarraController {
     public record TurnoAbierto(
             String id,
             String sala,
+            /** Nula en turnos viejos sin barra atribuida. */
+            String barra,
             String responsable,
             int fondoCentimos,
             int esperadoCentimos,
@@ -116,6 +120,7 @@ public class BarraController {
             return new TurnoAbierto(
                     a.getId(),
                     a.getSala().getNombre(),
+                    a.getBarra() == null ? null : a.getBarra().getNombre(),
                     a.getResponsable().getNombre(),
                     a.getAperturaCentimos(),
                     a.getEsperadoCentimos(),
@@ -130,10 +135,17 @@ public class BarraController {
      *     enseña entonces el formulario de apertura
      * @param noche la que se celebra ahora, para colgarle las ventas
      */
+    public record BarraParaElegir(String id, String nombre) {}
+
+    /**
+     * @param barras dónde se puede abrir turno. Con una sola, la pantalla no
+     *     pregunta: no hay nada que elegir.
+     */
     public record PantallaDeBarra(
             TurnoAbierto turno,
             String noche,
             String nocheSlug,
+            List<BarraParaElegir> barras,
             List<GrupoDeCatalogo> catalogo) {}
 
     /** El resultado de cerrar: lo que se firma. */
@@ -177,6 +189,7 @@ public class BarraController {
                 barra.turnoAbiertoDe(quien).map(TurnoAbierto::de).orElse(null),
                 noche == null ? null : noche.getTitulo(),
                 noche == null ? null : noche.getSlug(),
+                barra.barrasActivas().stream().map(b -> new BarraParaElegir(b.getId(), b.getNombre())).toList(),
                 catalogo());
     }
 
@@ -201,7 +214,7 @@ public class BarraController {
     public ResponseEntity<TurnoAbierto> abrir(
             @Valid @RequestBody Apertura apertura, @AuthenticationPrincipal Usuario quien) {
 
-        var arqueo = barra.abrirTurno(quien, apertura.fondoCentimos());
+        var arqueo = barra.abrirTurno(quien, apertura.fondoCentimos(), apertura.barraId());
         return ResponseEntity.status(HttpStatus.CREATED).body(TurnoAbierto.de(arqueo));
     }
 

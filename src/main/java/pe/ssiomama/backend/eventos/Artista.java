@@ -4,6 +4,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.util.UUID;
 
 /** DJ o grupo que toca una noche — tabla {@code "Artist"}. */
 @Entity
@@ -31,6 +32,30 @@ public class Artista {
 
     protected Artista() {
         // Hibernate necesita un constructor sin argumentos.
+    }
+
+    /** Un artista nuevo en el catálogo, todavía sin foto. */
+    static Artista crear(String nombre, String genero, String instagram, String bio) {
+        Artista a = new Artista();
+        a.id = UUID.randomUUID().toString();
+        a.actualizar(nombre, genero, instagram, bio);
+        return a;
+    }
+
+    /** Cambia la ficha. La foto va aparte: es un archivo, no un campo de formulario. */
+    void actualizar(String nombre, String genero, String instagram, String bio) {
+        this.nombre = nombre.trim();
+        this.genero = vacioANulo(genero);
+        this.instagram = vacioANulo(instagram);
+        this.bio = vacioANulo(bio);
+    }
+
+    void cambiarImagen(String url) {
+        this.imagen = vacioANulo(url);
+    }
+
+    private static String vacioANulo(String valor) {
+        return valor == null || valor.isBlank() ? null : valor.trim();
     }
 
     public String getId() {

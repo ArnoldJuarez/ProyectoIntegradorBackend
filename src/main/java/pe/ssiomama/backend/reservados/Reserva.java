@@ -85,6 +85,17 @@ public class Reserva {
         return r;
     }
 
+    /** El estado nuevo. Qué paso es válido lo decide {@link GestionDeReservas}, no la entidad. */
+    void pasarA(EstadoDeReserva nuevo) {
+        this.estado = nuevo;
+    }
+
+    /** Lo acordado por teléfono al confirmar: el depósito y cualquier detalle. */
+    void acordar(int depositoCentimos, String notas) {
+        this.depositoCentimos = depositoCentimos;
+        this.notas = notas == null || notas.isBlank() ? null : notas.trim();
+    }
+
     public String getId() {
         return id;
     }

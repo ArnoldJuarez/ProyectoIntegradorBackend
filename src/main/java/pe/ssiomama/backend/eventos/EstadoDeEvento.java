@@ -1,7 +1,7 @@
 package pe.ssiomama.backend.eventos;
 
 /**
- * Estado de una noche. Refleja el enum nativo {@code EventStatus} de PostgreSQL.
+ * Estado de una noche. Refleja el enum nativo {@code EstadoEvento} de PostgreSQL.
  *
  * <p>Solo {@link #PUBLICADO} sale a la web pública: un borrador con el cartel a
  * medias no debe aparecer en la agenda ni admitir compras.

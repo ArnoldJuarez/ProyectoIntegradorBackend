@@ -125,10 +125,28 @@ class PermisosServidorRealTest {
         HttpHeaders direccion = sesionDe("admin@ssiomama.test");
 
         for (String ruta : List.of(
-                "/api/promotores", "/api/local", "/api/ia/propuestas", "/api/ia/metricas", "/api/panel/historial")) {
+                "/api/promotores", "/api/local", "/api/ia/propuestas", "/api/ia/metricas", "/api/panel/historial",
+                // La gestión manual añadida después: artistas, reservas, gastos, compras y listas.
+                "/api/artistas", "/api/reservas", "/api/reservas/opciones", "/api/gastos", "/api/gastos/opciones",
+                "/api/inventario/ordenes", "/api/promotores/opciones")) {
             assertThat(estadoDe(ruta, new HttpHeaders())).as(ruta).isEqualTo(HttpStatus.UNAUTHORIZED);
             assertThat(estadoDe(ruta, portero)).as(ruta).isEqualTo(HttpStatus.FORBIDDEN);
             assertThat(estadoDe(ruta, direccion)).as(ruta).isEqualTo(HttpStatus.OK);
+        }
+    }
+
+    /**
+     * El personal es más estricto que el resto del panel: quien reparte roles
+     * puede darse cualquier permiso, así que la jefatura de sala no entra.
+     */
+    @Test
+    @DisplayName("el personal: solo direccion, ni siquiera la jefatura de sala")
+    void personalSoloDireccion() {
+        for (String ruta : List.of("/api/personal", "/api/personal/opciones")) {
+            assertThat(estadoDe(ruta, new HttpHeaders())).as(ruta).isEqualTo(HttpStatus.UNAUTHORIZED);
+            assertThat(estadoDe(ruta, sesionDe("puerta@ssiomama.test"))).as(ruta).isEqualTo(HttpStatus.FORBIDDEN);
+            assertThat(estadoDe(ruta, sesionDe("sala@ssiomama.test"))).as(ruta).isEqualTo(HttpStatus.FORBIDDEN);
+            assertThat(estadoDe(ruta, sesionDe("admin@ssiomama.test"))).as(ruta).isEqualTo(HttpStatus.OK);
         }
     }
 

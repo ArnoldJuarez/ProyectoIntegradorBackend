@@ -3,6 +3,8 @@ package pe.ssiomama.backend.eventos;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.regex.Pattern;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pe.ssiomama.backend.entradas.EntradaRepository;
@@ -41,12 +43,21 @@ public class GestionDeEventos {
     /** Lo más que puede durar una noche. Más que eso es un error de tecleo. */
     private static final Duration DURACION_MAXIMA = Duration.ofHours(24);
 
+    /**
+     * Lo que se acepta como video: un archivo subido aquí o una dirección https
+     * (un MP4 alojado fuera, o YouTube). Un «javascript:» pegado en el campo
+     * acabaría en el {@code src} de la ficha pública.
+     */
+    private static final Pattern VIDEO_ACEPTADO =
+            Pattern.compile("^(" + Pattern.quote(Medios.RUTA_VIDEOS) + "[a-z0-9.-]+|https://\\S+)$");
+
     private final EventoRepository eventos;
     private final TipoDeEntradaRepository tipos;
     private final SalaRepository salas;
     private final ArtistaRepository artistas;
     private final ActuacionRepository cartel;
     private final EntradaRepository entradas;
+    private final JdbcClient sql;
 
     public GestionDeEventos(
             EventoRepository eventos,
@@ -54,13 +65,15 @@ public class GestionDeEventos {
             SalaRepository salas,
             ArtistaRepository artistas,
             ActuacionRepository cartel,
-            EntradaRepository entradas) {
+            EntradaRepository entradas,
+            JdbcClient sql) {
         this.eventos = eventos;
         this.tipos = tipos;
         this.salas = salas;
         this.artistas = artistas;
         this.cartel = cartel;
         this.entradas = entradas;
+        this.sql = sql;
     }
 
     // ── Lo que llega del formulario ───────────────────────────────
@@ -80,7 +93,25 @@ public class GestionDeEventos {
             String vestimenta,
             EstadoDeEvento estado,
             String portada,
-            List<String> artistaIds) {}
+            String video,
+            List<String> artistaIds) {
+
+        /** Una noche sin video, que es lo normal. */
+        public DatosDeNoche(
+                String titulo,
+                String descripcion,
+                String salaId,
+                Instant puertasA,
+                Instant terminaA,
+                int edadMinima,
+                String vestimenta,
+                EstadoDeEvento estado,
+                String portada,
+                List<String> artistaIds) {
+            this(titulo, descripcion, salaId, puertasA, terminaA, edadMinima, vestimenta, estado, portada,
+                    null, artistaIds);
+        }
+    }
 
     public record DatosDeTipo(
             String nombre,
@@ -97,6 +128,7 @@ public class GestionDeEventos {
     @Transactional
     public Evento crear(DatosDeNoche datos) {
         comprobarHorario(datos.puertasA(), datos.terminaA());
+        comprobarVideo(datos.video());
 
         Sala sala = salas.findById(datos.salaId())
                 .orElseThrow(() -> new EventoRechazado("Esa sala no existe."));
@@ -114,6 +146,7 @@ public class GestionDeEventos {
                 datos.vestimenta(),
                 datos.estado());
         noche.cambiarPortada(datos.portada());
+        noche.cambiarVideo(datos.video());
 
         eventos.save(noche);
         montarElCartel(noche, datos.artistaIds());
@@ -130,6 +163,7 @@ public class GestionDeEventos {
     @Transactional
     public Evento editar(String slug, DatosDeNoche datos) {
         comprobarHorario(datos.puertasA(), datos.terminaA());
+        comprobarVideo(datos.video());
 
         Evento noche = eventos.findBySlug(slug)
                 .orElseThrow(() -> new EventoRechazado("Esa noche no existe."));
@@ -173,6 +207,7 @@ public class GestionDeEventos {
                 datos.vestimenta(),
                 datos.estado());
         noche.cambiarPortada(datos.portada());
+        noche.cambiarVideo(datos.video());
 
         // El cartel se reemplaza entero. Hay que vaciar antes de escribir, y el
         // flush explícito es lo que garantiza ese orden: sin él, Hibernate
@@ -182,6 +217,69 @@ public class GestionDeEventos {
         montarElCartel(noche, datos.artistaIds());
 
         return noche;
+    }
+
+    /**
+     * Borra una noche que no ha dejado rastro.
+     *
+     * <p>Existe para lo que se crea y no llega a nada: un borrador que se
+     * duplicó, una propuesta de la IA que se aprobó y al final no convence.
+     * Una noche <b>con historia</b> —pedidos, reservas, listas, accesos, ventas
+     * de barra, gastos— no se borra: se cancela, que deja constancia de lo que
+     * pasó. Y una publicada tampoco, aunque no haya vendido nada: su dirección
+     * ya puede estar compartida en redes.
+     *
+     * @return las direcciones de su flyer y su video, para borrar los archivos
+     */
+    @Transactional
+    public List<String> borrar(String slug) {
+        Evento noche = eventos.findBySlug(slug)
+                .orElseThrow(() -> new EventoRechazado("Esa noche no existe."));
+
+        if (noche.getEstado() != EstadoDeEvento.BORRADOR && noche.getEstado() != EstadoDeEvento.CANCELADO) {
+            throw new EventoRechazado(
+                    "Solo se borran noches en borrador o canceladas. Esta está «%s»: cámbiala a cancelada."
+                            .formatted(noche.getEstado().name().toLowerCase()));
+        }
+
+        String rastro = sql.sql("""
+                select concat_ws(', ',
+                    case when exists (select 1 from "Pedido" where "eventoId" = :id) then 'pedidos' end,
+                    case when exists (select 1 from "ReservaBox" where "eventoId" = :id) then 'reservas' end,
+                    case when exists (select 1 from "ListaInvitados" where "eventoId" = :id) then 'listas de invitados' end,
+                    case when exists (select 1 from "Acceso" where "eventoId" = :id) then 'accesos' end,
+                    case when exists (select 1 from "VentaBarra" where "eventoId" = :id) then 'ventas de barra' end,
+                    case when exists (select 1 from "Gasto" where "eventoId" = :id) then 'gastos' end)
+                """)
+                .param("id", noche.getId())
+                .query(String.class)
+                .single();
+        if (rastro != null && !rastro.isBlank()) {
+            throw new EventoRechazado("No se puede borrar: tiene " + rastro + ". Cancélala en su lugar.");
+        }
+
+        List<String> medios = new java.util.ArrayList<>();
+        if (noche.getPortada() != null) medios.add(noche.getPortada());
+        if (noche.getVideo() != null) medios.add(noche.getVideo());
+
+        /*
+         * El cartel se borra entidad a entidad, NO con el borrado masivo de
+         * editar(). Las actuaciones tienen la noche dentro de su clave
+         * (@MapsId): si quedan gestionadas por Hibernate después de un DELETE
+         * masivo, al hacer flush propaga el persist hacia la noche y deshace su
+         * borrado en silencio («un-scheduling entity deletion»). Lo detectó el
+         * test: la noche seguía ahí y ningún DELETE llegó a la base.
+         *
+         * Con las entradas, lo mismo por otro camino: si alguna sigue
+         * gestionada apuntando a la noche borrada, el flush falla con «unsaved
+         * transient instance». Se buscan con una consulta —la colección de la
+         * noche puede estar desfasada— y se borran antes que ella.
+         */
+        cartel.deleteAll(cartel.buscarDeLaNoche(noche.getId()));
+        tipos.deleteAll(tipos.buscarDeLaNoche(noche.getId()));
+        noche.getTiposDeEntrada().clear();
+        eventos.delete(noche);
+        return medios;
     }
 
     // ── Tipos de entrada ──────────────────────────────────────────
@@ -274,6 +372,13 @@ public class GestionDeEventos {
         }
         if (Duration.between(puertas, fin).compareTo(DURACION_MAXIMA) > 0) {
             throw new EventoRechazado("Una noche no puede durar más de 24 horas.");
+        }
+    }
+
+    private void comprobarVideo(String video) {
+        if (video == null || video.isBlank()) return;
+        if (!VIDEO_ACEPTADO.matcher(video.trim()).matches()) {
+            throw new EventoRechazado("El video tiene que ser un archivo subido o una dirección https.");
         }
     }
 

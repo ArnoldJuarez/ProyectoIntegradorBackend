@@ -38,6 +38,14 @@ public enum Rol {
     /** Quién entra al panel de gestión. */
     public static final Set<Rol> PANEL = Set.of(DIRECCION, GERENCIA);
 
+    /**
+     * Quién da de alta personal y reparte roles.
+     *
+     * <p>Solo dirección: quien puede crear cuentas puede darse a sí mismo
+     * cualquier permiso, así que esto no se delega en la jefatura de sala.
+     */
+    public static final Set<Rol> EQUIPO = Set.of(DIRECCION);
+
     /** Quién puede validar entradas en la puerta. */
     public static final Set<Rol> EN_LA_PUERTA = Set.of(DIRECCION, GERENCIA, PUERTA);
 
