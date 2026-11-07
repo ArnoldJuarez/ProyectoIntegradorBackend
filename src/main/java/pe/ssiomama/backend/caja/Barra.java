@@ -45,10 +45,10 @@ import pe.ssiomama.backend.personal.PuestoRepository;
 public class Barra {
 
     /** El resultado de cobrar. */
-    public record VentaHecha(String id, int totalCentimos, int unidades, int esperadoEnCajon) {}
+    public record VentaHecha(Long id, int totalCentimos, int unidades, int esperadoEnCajon) {}
 
     /** Lo que se pide cobrar: qué producto y cuántos. */
-    public record LineaPedida(String productoId, int cantidad) {}
+    public record LineaPedida(Long productoId, int cantidad) {}
 
     private final ArqueoRepository arqueos;
     private final VentaDeBarraRepository ventas;
@@ -103,7 +103,7 @@ public class Barra {
      *     mal las ventas de toda la noche.
      */
     @Transactional
-    public ArqueoDeCaja abrirTurno(Usuario responsable, int fondoCentimos, String barraId) {
+    public ArqueoDeCaja abrirTurno(Usuario responsable, int fondoCentimos, Long barraId) {
         if (fondoCentimos < 0) {
             throw new CajaRechazada("El fondo de caja no puede ser negativo.");
         }
@@ -124,8 +124,8 @@ public class Barra {
         return puestos.findByEsDeBarraTrueOrderByActivoDescNombreAsc().stream().filter(Puesto::isActivo).toList();
     }
 
-    private Puesto barraPara(Usuario responsable, String barraId) {
-        if (barraId != null && !barraId.isBlank()) {
+    private Puesto barraPara(Usuario responsable, Long barraId) {
+        if (barraId != null) {
             return puestos.findById(barraId)
                     .filter(Puesto::isEsDeBarra)
                     .filter(Puesto::isActivo)
@@ -154,7 +154,7 @@ public class Barra {
      * un descuadre inventado.
      */
     @Transactional
-    public ArqueoDeCaja cerrarTurno(Usuario quien, String arqueoId, int contadoCentimos) {
+    public ArqueoDeCaja cerrarTurno(Usuario quien, Long arqueoId, int contadoCentimos) {
         if (contadoCentimos < 0) {
             throw new CajaRechazada("Lo contado no puede ser negativo.");
         }
@@ -186,7 +186,7 @@ public class Barra {
     @Transactional
     public VentaHecha cobrar(
             Usuario quien,
-            String arqueoId,
+            Long arqueoId,
             MetodoDePago metodo,
             String eventoSlug,
             List<LineaPedida> pedidas) {
@@ -207,8 +207,8 @@ public class Barra {
             throw new CajaRechazada("Esa caja es de otra persona.");
         }
 
-        Map<String, Integer> porProducto = juntarRepetidas(pedidas);
-        Map<String, Producto> catalogo = cargar(porProducto.keySet().stream().toList());
+        Map<Long, Integer> porProducto = juntarRepetidas(pedidas);
+        Map<Long, Producto> catalogo = cargar(porProducto.keySet().stream().toList());
 
         Evento noche = eventoSlug == null || eventoSlug.isBlank()
                 ? null
@@ -228,8 +228,8 @@ public class Barra {
         ventas.save(venta);
 
         // Los movimientos se crean después de guardar la venta porque su
-        // referencia lleva el id de la venta, y ese id existe desde que se
-        // construye — pero el rastro solo tiene sentido si la venta se guardó.
+        // referencia lleva el número de la venta, y ese número lo pone la base
+        // al insertarla.
         for (var entrada : porProducto.entrySet()) {
             Producto producto = catalogo.get(entrada.getKey());
             int cantidad = entrada.getValue();
@@ -261,8 +261,8 @@ public class Barra {
      * <p>{@link LinkedHashMap} para conservar el orden en que se pulsaron: el
      * ticket se lee mejor si las líneas salen como se cantaron.
      */
-    private Map<String, Integer> juntarRepetidas(List<LineaPedida> pedidas) {
-        Map<String, Integer> juntas = new LinkedHashMap<>();
+    private Map<Long, Integer> juntarRepetidas(List<LineaPedida> pedidas) {
+        Map<Long, Integer> juntas = new LinkedHashMap<>();
 
         for (LineaPedida l : pedidas) {
             if (l.cantidad() <= 0) {
@@ -274,7 +274,7 @@ public class Barra {
     }
 
     /** Los productos pedidos. Si falta alguno, la petición nombra algo que no existe. */
-    private Map<String, Producto> cargar(List<String> ids) {
+    private Map<Long, Producto> cargar(List<Long> ids) {
         List<Producto> encontrados = productos.findAllById(ids);
 
         if (encontrados.size() != ids.size()) {

@@ -41,7 +41,7 @@ class ExpedienteDeNocheTest {
     void cuadraConLaBase() {
         String slug = unaNocheConDatos();
         var x = expedientes.de(slug).orElseThrow();
-        String id = x.noche().id();
+        Long id = x.noche().id();
 
         long barra = jdbc.queryForObject(
                 "select coalesce(sum(\"totalCentimos\"), 0) from \"VentaBarra\" where \"eventoId\" = ?", Long.class, id);

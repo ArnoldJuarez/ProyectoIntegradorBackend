@@ -48,7 +48,7 @@ class CarteleraTest {
      */
     @BeforeEach
     void programarUnaNoche() {
-        String id = NocheDePrueba.crear(jdbc, "Noche de prueba de cartelera");
+        Long id = NocheDePrueba.crear(jdbc, "Noche de prueba de cartelera");
         NocheDePrueba.anadirTipoDeEntrada(jdbc, id, "General", 2500, 100);
     }
 

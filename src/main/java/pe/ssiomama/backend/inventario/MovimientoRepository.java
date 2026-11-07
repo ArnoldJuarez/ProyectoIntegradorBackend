@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface MovimientoRepository extends JpaRepository<MovimientoDeInventario, String> {
+public interface MovimientoRepository extends JpaRepository<MovimientoDeInventario, Long> {
 
     /**
      * Los últimos movimientos, de lo más reciente a lo más antiguo.
@@ -31,5 +31,5 @@ public interface MovimientoRepository extends JpaRepository<MovimientoDeInventar
             order by m.creadoEn desc
             """)
     List<MovimientoDeInventario> buscarPorProducto(
-            @Param("idProducto") String idProducto, Pageable pagina);
+            @Param("idProducto") Long idProducto, Pageable pagina);
 }

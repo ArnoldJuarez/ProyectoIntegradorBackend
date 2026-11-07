@@ -72,7 +72,7 @@ class EscanerDePuertaTest {
      * a la API de producción que solo usarían los tests. El {@code ::text} en el
      * estado evita tener que enlazar el tipo enum de PostgreSQL.
      */
-    private String unaEntrada(String slug, EstadoDeEntrada estado) {
+    private Long unaEntrada(String slug, EstadoDeEntrada estado) {
         return jdbc.queryForObject(
                 """
                 select e.id from "Entrada" e
@@ -80,7 +80,7 @@ class EscanerDePuertaTest {
                 where v.slug = ? and e.estado::text = ?
                 order by e.id limit 1
                 """,
-                String.class,
+                Long.class,
                 slug,
                 estado.name());
     }
@@ -134,7 +134,7 @@ class EscanerDePuertaTest {
     @Test
     @DisplayName("firma buena de una entrada que no existe: no es falsa, es inexistente")
     void firmaBuenaSinEntrada() {
-        var r = escaner.escanear(firma.codificar("id-que-no-existe"), portero(), Instant.now());
+        var r = escaner.escanear(firma.codificar(999_999_999L), portero(), Instant.now());
 
         assertThat(r.motivo()).isEqualTo(MotivoDeRechazo.NO_EXISTE);
     }
@@ -144,7 +144,7 @@ class EscanerDePuertaTest {
     @Test
     @DisplayName("una entrada anulada no pasa")
     void anuladaNoPasa() {
-        String id = unaEntrada(NOCHE_PASADA, EstadoDeEntrada.VALIDA);
+        Long id = unaEntrada(NOCHE_PASADA, EstadoDeEntrada.VALIDA);
         // Se anula por SQL porque la entidad no expone ese cambio: anular es
         // cosa del panel, no de la puerta.
         jdbc.update("update \"Entrada\" set estado = 'ANULADA'::\"EstadoEntrada\" where id = ?", id);
@@ -165,7 +165,7 @@ class EscanerDePuertaTest {
     @Test
     @DisplayName("una entrada de otra noche no pasa, y lo dice con el nombre del evento")
     void deOtraNocheNoPasa() {
-        String id = unaEntrada(OTRA_NOCHE, EstadoDeEntrada.VALIDA);
+        Long id = unaEntrada(OTRA_NOCHE, EstadoDeEntrada.VALIDA);
 
         var r = escaner.escanear(firma.codificar(id), portero(), duranteLaNoche(NOCHE_PASADA));
 
@@ -176,7 +176,7 @@ class EscanerDePuertaTest {
     @Test
     @DisplayName("la ventana se abre horas antes de empezar, no al empezar")
     void seAbreAntesDeEmpezar() {
-        String id = unaEntrada(NOCHE_PASADA, EstadoDeEntrada.VALIDA);
+        Long id = unaEntrada(NOCHE_PASADA, EstadoDeEntrada.VALIDA);
         Instant empieza = eventos.buscarPorSlugConDetalle(NOCHE_PASADA).orElseThrow().getEmpiezaA();
 
         // Dos horas antes de empezar ya se puede entrar: la cola se forma antes.
@@ -187,7 +187,7 @@ class EscanerDePuertaTest {
         comoUnaPeticionNueva();
 
         // Pero un día antes, no.
-        String otra = unaEntrada(OTRA_NOCHE, EstadoDeEntrada.VALIDA);
+        Long otra = unaEntrada(OTRA_NOCHE, EstadoDeEntrada.VALIDA);
         var demasiadoPronto = escaner.escanear(
                 firma.codificar(otra), portero(), empieza.minus(Duration.ofDays(1)));
         assertThat(demasiadoPronto.motivo()).isEqualTo(MotivoDeRechazo.OTRA_FECHA);
@@ -201,7 +201,7 @@ class EscanerDePuertaTest {
     @Test
     @DisplayName("una entrada ya usada dice a que hora entro y quien la escaneo")
     void yaUsadaDiceCuandoYQuien() {
-        String id = unaEntrada(NOCHE_PASADA, EstadoDeEntrada.USADA);
+        Long id = unaEntrada(NOCHE_PASADA, EstadoDeEntrada.USADA);
         var previo = entradas.buscarPorIdParaLaPuerta(id).orElseThrow().getEscaneo();
 
         var r = escaner.escanear(firma.codificar(id), portero(), duranteLaNoche(NOCHE_PASADA));
@@ -217,8 +217,8 @@ class EscanerDePuertaTest {
     @Test
     @DisplayName("una entrada valida pasa y queda registrada")
     void laValidaPasa() {
-        String id = unaEntrada(NOCHE_PASADA, EstadoDeEntrada.VALIDA);
-        String eventoId = eventos.buscarPorSlugConDetalle(NOCHE_PASADA).orElseThrow().getId();
+        Long id = unaEntrada(NOCHE_PASADA, EstadoDeEntrada.VALIDA);
+        Long eventoId = eventos.buscarPorSlugConDetalle(NOCHE_PASADA).orElseThrow().getId();
         long antes = escaneos.countByEventoId(eventoId);
         Instant momento = duranteLaNoche(NOCHE_PASADA);
 
@@ -242,7 +242,7 @@ class EscanerDePuertaTest {
     @Test
     @DisplayName("el acceso anota por que puerta entro")
     void anotaLaPuerta() {
-        String id = unaEntrada(NOCHE_PASADA, EstadoDeEntrada.VALIDA);
+        Long id = unaEntrada(NOCHE_PASADA, EstadoDeEntrada.VALIDA);
 
         escaner.escanear(firma.codificar(id), portero(), duranteLaNoche(NOCHE_PASADA));
         comoUnaPeticionNueva();
@@ -261,7 +261,7 @@ class EscanerDePuertaTest {
     @Test
     @DisplayName("escanear dos veces la misma entrada: la segunda no pasa")
     void laSegundaVezNoPasa() {
-        String id = unaEntrada(NOCHE_PASADA, EstadoDeEntrada.VALIDA);
+        Long id = unaEntrada(NOCHE_PASADA, EstadoDeEntrada.VALIDA);
         String codigo = firma.codificar(id);
         Instant momento = duranteLaNoche(NOCHE_PASADA);
 

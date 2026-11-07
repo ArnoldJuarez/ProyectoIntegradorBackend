@@ -82,10 +82,10 @@ public class PedidoController {
 
     public record EntradaEnFicha(
             /**
-             * Los primeros caracteres del id, para poder identificarla al
-             * hablar. NO se manda el código entero: son sesenta caracteres que
-             * incluyen la firma del QR, no dicen nada a una persona, y
-             * publicarlos en una lista es repartir entradas válidas.
+             * El número de la entrada, para poder identificarla al hablar. NO
+             * se manda el código entero: incluye la firma del QR, no dice nada
+             * a una persona, y publicarlo en una lista es repartir entradas
+             * válidas.
              */
             String referencia,
             String tipoDeEntrada,
@@ -97,7 +97,7 @@ public class PedidoController {
 
         static EntradaEnFicha de(Entrada e) {
             return new EntradaEnFicha(
-                    e.getId().substring(0, Math.min(8, e.getId().length())),
+                    String.valueOf(e.getId()),
                     e.getTipoDeEntrada().getNombre(),
                     e.getTitular(),
                     e.getEstado(),

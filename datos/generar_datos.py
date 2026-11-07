@@ -19,6 +19,9 @@ La aleatoriedad tiene semilla fija: volver a generar da exactamente lo mismo.
 Uso:  python generar_datos.py      (escribe poblar.sql al lado)
 
 Se aplica una sola vez, sobre la base del respaldo: si ya tiene los datos, se niega.
+La base tiene que estar al día con Flyway (arranca el backend una vez después de
+restaurarla): los ids son enteros y cada tabla sigue desde el mayor que ya tiene.
+`DB_NAME` elige la base (por defecto `discoteca`).
 """
 
 import base64
@@ -31,7 +34,6 @@ import random
 import re
 import subprocess
 import unicodedata
-import uuid
 from collections import defaultdict
 
 R = random.Random(20260605)
@@ -56,7 +58,7 @@ SECRETO = leer_yml("ticket-secret").encode()
 
 def consulta(sql):
     r = subprocess.run(
-        [PSQL, "-U", "postgres", "-d", "discoteca", "-At", "-F", "\x1f", "-c", sql],
+        [PSQL, "-U", "postgres", "-d", os.environ.get("DB_NAME", "discoteca"), "-At", "-F", "\x1f", "-c", sql],
         capture_output=True, env=ENV, check=True)
     texto = r.stdout.decode("utf-8")
     return [linea.split("\x1f") for linea in texto.splitlines() if linea]
@@ -64,8 +66,30 @@ def consulta(sql):
 
 # ─────────────────────────── utilidades ───────────────────────────
 
-def nuevo_id():
-    return str(uuid.uuid4())
+_ULTIMO_ID = {}
+
+
+def nuevo_id(tabla):
+    """El siguiente número de `tabla` (los ids son enteros autoincrementales).
+
+    Se reparte aquí y no lo pone la base al insertar porque las filas se enlazan
+    entre sí antes de escribirse (un pedido y sus entradas, una venta y sus
+    líneas) y la entrada firma su QR con el suyo. Empieza en el mayor id que ya
+    hay; al final del SQL se ajusta la secuencia de cada tabla para que la app
+    siga numerando desde ahí.
+    """
+    if tabla not in _ULTIMO_ID:
+        _ULTIMO_ID[tabla] = int(consulta(f'select coalesce(max(id), 0) from "{tabla}"')[0][0])
+    _ULTIMO_ID[tabla] += 1
+    return str(_ULTIMO_ID[tabla])
+
+
+def ajustar_secuencias(f):
+    """Deja la secuencia identity de cada tabla tocada en su mayor id."""
+    f.write("\n-- Secuencias de los ids: la app sigue numerando desde aquí\n")
+    for tabla in sorted(_ULTIMO_ID):
+        f.write(f"select setval(pg_get_serial_sequence('public.\"{tabla}\"', 'id'), "
+                f"(select max(id) from \"{tabla}\"));\n")
 
 
 def lima(fecha, horas, minutos=0, segundos=0):
@@ -156,6 +180,7 @@ class Salida:
                     f.write(f'INSERT INTO "{tabla}" (' + ", ".join(f'"{c}"' for c in cols) + ") VALUES\n")
                     f.write(",\n".join("(" + ", ".join(q(fila[c]) for c in cols) + ")" for fila in lote))
                     f.write(";\n")
+            ajustar_secuencias(f)
 
 
 S = Salida()
@@ -285,12 +310,12 @@ for clave, nombre, contacto, correo, tel in [
     ("gaseosas", "Arca Continental Lindley", "Mariela Torres", "atencion.arequipa@arcacontal.pe", "054 285 960"),
     ("licores2", "Licores del Sur E.I.R.L.", "Hugo Begazo", "licoresdelsur.aqp@hotmail.com", "958 103 774"),
 ]:
-    pid = nuevo_id()
+    pid = nuevo_id("Proveedor")
     PROVEEDORES[clave] = pid
     S.fila("Proveedor", id=pid, nombre=nombre, contacto=contacto, correo=correo, telefono=tel)
 
 if "Preparados" not in CATEGORIAS:
-    CATEGORIAS["Preparados"] = nuevo_id()
+    CATEGORIAS["Preparados"] = nuevo_id("CategoriaProducto")
     S.fila("CategoriaProducto", id=CATEGORIAS["Preparados"], nombre="Preparados")
 
 # Las marcas que la casa pone al pie de sus flyers.
@@ -307,7 +332,7 @@ NUEVOS = [
     ("PRE-SAN-JAR", "Jarra de sangría", "Preparados", "UNIDAD", 900, 3000, 10),
 ]
 for sku, nombre, cat, unidad, coste, precio, alerta in NUEVOS:
-    pid = nuevo_id()
+    pid = nuevo_id("Producto")
     PRODUCTOS[sku] = dict(id=pid, sku=sku, nombre=nombre, coste=coste, precio=precio, stock=0, alerta=alerta,
                           nuevo=True, unidad=unidad, categoria=CATEGORIAS[cat])
 
@@ -333,7 +358,7 @@ def caja_de(sku):
 
 # ─────────────────────────── personal sin cuenta ───────────────────────────
 
-LIZBETH, RUBEN = nuevo_id(), nuevo_id()
+LIZBETH, RUBEN = nuevo_id("Usuario"), nuevo_id("Usuario")
 S.fila("Usuario", id=LIZBETH, correo=None, hashClave=None, nombre="Lizbeth Huanca", rol="BARRA", activo=True,
        creadoEn=lima(dt.date(2026, 5, 20), 11, 4), puestoId=PUESTOS.get("Barra principal"),
        fechaAlta=dt.date(2026, 5, 22), tarifaHoraCentimos=1250, codigoPromotor=None, comisionPct=None)
@@ -354,7 +379,7 @@ NUEVOS_ARTISTAS = [
      "Del rock en español al reguetón de los 2000. Sets de tres horas."),
 ]
 for nombre, genero, ig, bio in NUEVOS_ARTISTAS:
-    aid = nuevo_id()
+    aid = nuevo_id("Artista")
     ARTISTAS[nombre] = aid
     S.fila("Artista", id=aid, nombre=nombre, genero=genero, urlImagen=None, instagram=ig, bio=bio)
 
@@ -593,7 +618,7 @@ def cliente_nuevo(mujer, cuando):
     nac = nacimiento()
     consiente = R.random() < 0.54
     creado = cuando - dt.timedelta(minutes=R.randint(1, 4))
-    c = dict(id=nuevo_id(), mujer=mujer, nombre=nombre, apellido=ap1, visitas=0, gasto=0, ultima=None,
+    c = dict(id=nuevo_id("Cliente"), mujer=mujer, nombre=nombre, apellido=ap1, visitas=0, gasto=0, ultima=None,
              creado=creado, existente=False, peso=R.lognormvariate(0, 1.0), primera=creado)
     S.fila("Cliente", id=c["id"], nombre=nombre, apellido=ap1, correo=correo_para(nombre, ap1, ap2, nac),
            telefono=telefono() if R.random() < 0.88 else None, fechaNacimiento=nac, distrito=elegir(DISTRITOS),
@@ -638,7 +663,7 @@ def hora_llegada(es_lista, fecha):
 
 def crear_pedido(evento, tipo, cliente, cantidad, creado, pagado, metodo, canal, promotor, llegada, asiste,
                  pendiente=False):
-    pid = nuevo_id()
+    pid = nuevo_id("Pedido")
     codigo = nuevo_codigo()
     subtotal = tipo["precio"] * cantidad
     comision = round(subtotal * 0.05) if canal == "WEB" else 0
@@ -648,21 +673,21 @@ def crear_pedido(evento, tipo, cliente, cantidad, creado, pagado, metodo, canal,
            estado="PENDIENTE" if pendiente else "PAGADO", metodoPago=None if pendiente else metodo,
            refPago=None if pendiente else (f"SIMULADO-{codigo}" if canal == "WEB" else None),
            creadoEn=creado, pagadoEn=None if pendiente else pagado)
-    S.fila("LineaPedido", id=nuevo_id(), pedidoId=pid, tipoEntradaId=tipo["id"], cantidad=cantidad,
+    S.fila("LineaPedido", id=nuevo_id("LineaPedido"), pedidoId=pid, tipoEntradaId=tipo["id"], cantidad=cantidad,
            precioUnitarioCentimos=tipo["precio"])
     tipo["vendidas"] += cantidad
     if pendiente:
         return 0
     usadas = 0
     for i in range(cantidad):
-        eid = nuevo_id()
+        eid = nuevo_id("Entrada")
         usada = asiste and llegada is not None and (R.random() < 0.985)
         S.fila("Entrada", id=eid, codigo=f"{eid}.{firma(eid)}", pedidoId=pid, tipoEntradaId=tipo["id"],
                eventoId=evento["id"], nombreTitular=f'{cliente["nombre"]} {cliente["apellido"]}', dniTitular=None,
                estado="USADA" if usada else "VALIDA", emitidaEn=pagado)
         if usada:
             cuando = llegada + dt.timedelta(seconds=R.randint(0, 420) if i else 0)
-            S.fila("Acceso", id=nuevo_id(), entradaId=eid, eventoId=evento["id"],
+            S.fila("Acceso", id=nuevo_id("Acceso"), entradaId=eid, eventoId=evento["id"],
                    escaneadoPorId=PORTERO if R.random() < 0.58 else RUBEN, puertaId=PUERTA_PRINCIPAL,
                    escaneadoEn=cuando)
             usadas += 1
@@ -673,12 +698,12 @@ def crear_pedido(evento, tipo, cliente, cantidad, creado, pagado, metodo, canal,
         cliente["ultima"] = pagado
     if cliente["primera"] is None or creado < cliente["primera"]:
         cliente["primera"] = creado
-    S.fila("MovimientoFidelidad", id=nuevo_id(), clienteId=cliente["id"], puntos=round(total / 100),
+    S.fila("MovimientoFidelidad", id=nuevo_id("MovimientoFidelidad"), clienteId=cliente["id"], puntos=round(total / 100),
            motivo=f"Compra {codigo}", pedidoId=pid, creadoEn=pagado)
     palabra = "entrada" if cantidad == 1 else "entradas"
     resumen = (f"Compró {cantidad} {palabra} ({codigo})." if canal == "WEB"
                else f"Compró {cantidad} {palabra} en la puerta ({codigo}).")
-    S.fila("Interaccion", id=nuevo_id(), clienteId=cliente["id"], tipo="COMPRA", canal=canal, resumen=resumen,
+    S.fila("Interaccion", id=nuevo_id("Interaccion"), clienteId=cliente["id"], tipo="COMPRA", canal=canal, resumen=resumen,
            metadatos=None, ocurrioEn=pagado)
     return usadas
 
@@ -831,7 +856,7 @@ EVENTOS = []
 
 
 def crear_evento(fecha, titulo, cabeza, teloneros, plantilla, foto, descripcion, estado, extra_o_fraccion):
-    eid = nuevo_id()
+    eid = nuevo_id("Evento")
     publicado = lima(fecha - dt.timedelta(days=R.randint(9, 16)), R.choice([12, 16, 18, 19, 20]), R.randint(0, 59))
     if estado != "CERRADO":
         # Una noche a la venta ya se publicó: no puede tener fecha de publicación futura.
@@ -843,7 +868,7 @@ def crear_evento(fecha, titulo, cabeza, teloneros, plantilla, foto, descripcion,
            edadMinima=18, vestimenta=VESTIMENTA, estado=estado,
            publicadoEn=None if estado == "BORRADOR" else publicado, creadoEn=publicado - dt.timedelta(hours=R.randint(20, 70)))
     for nombre, precio, cantidad, maximo, consumos, clave, desc in PLANTILLAS[plantilla]:
-        tid = nuevo_id()
+        tid = nuevo_id("TipoEntrada")
         hasta = None
         if clave == "preventa" and plantilla not in ("universitario",):
             jueves = fecha - dt.timedelta(days=(fecha.weekday() - 3) % 7 or 7)
@@ -952,14 +977,14 @@ def reponer(dia, faltas):
         serie = {"cerveza": "F203", "gaseosas": "F061", "licores": "F001", "licores2": "E001"}[prov]
         referencia = f"Factura {serie}-{factura[prov]:07d}"
         recibido = lima(dia, R.randint(10, 15), R.randint(0, 59))
-        oc = nuevo_id()
+        oc = nuevo_id("OrdenCompra")
         total = sum(PRODUCTOS[s]["coste"] * u for s, u in lineas)
         S.fila("OrdenCompra", id=oc, proveedorId=PROVEEDORES[prov], estado="RECIBIDO", totalCentimos=total,
                esperadoEn=lima(dia, 10), recibidoEn=recibido, creadoEn=recibido - dt.timedelta(days=R.randint(1, 3), hours=R.randint(0, 5)))
         for sku, u in lineas:
-            S.fila("LineaOrdenCompra", id=nuevo_id(), ordenCompraId=oc, productoId=PRODUCTOS[sku]["id"], cantidad=u,
+            S.fila("LineaOrdenCompra", id=nuevo_id("LineaOrdenCompra"), ordenCompraId=oc, productoId=PRODUCTOS[sku]["id"], cantidad=u,
                    costeUnitarioCentimos=PRODUCTOS[sku]["coste"])
-            S.fila("MovimientoStock", id=nuevo_id(), productoId=PRODUCTOS[sku]["id"], salaId=SALA_ID, tipo="COMPRA",
+            S.fila("MovimientoStock", id=nuevo_id("MovimientoStock"), productoId=PRODUCTOS[sku]["id"], salaId=SALA_ID, tipo="COMPRA",
                    cantidad=u, costeUnitarioCentimos=PRODUCTOS[sku]["coste"], referencia=referencia,
                    usuarioId=GERENTE, creadoEn=recibido)
             stock[sku] += u
@@ -989,7 +1014,7 @@ for ev in noches_ordenadas:
         for sku in R.sample(list(PRODUCTOS), 2):
             d = R.choice([-1, -1, 1, -2])
             if stock[sku] + d >= 0:
-                S.fila("MovimientoStock", id=nuevo_id(), productoId=PRODUCTOS[sku]["id"], salaId=SALA_ID, tipo="AJUSTE",
+                S.fila("MovimientoStock", id=nuevo_id("MovimientoStock"), productoId=PRODUCTOS[sku]["id"], salaId=SALA_ID, tipo="AJUSTE",
                        cantidad=d, costeUnitarioCentimos=0, referencia="Conteo físico de fin de mes",
                        usuarioId=GERENTE, creadoEn=lima(fecha, 12, 30))
                 stock[sku] += d
@@ -1000,7 +1025,7 @@ for ev in noches_ordenadas:
     if existente:
         caja_id, fondo, esperado_previo, contado_previo = existente
     else:
-        caja_id, fondo = nuevo_id(), R.choice([20000, 20000, 20000, 15000, 30000])
+        caja_id, fondo = nuevo_id("SesionCaja"), R.choice([20000, 20000, 20000, 15000, 30000])
     efectivo = 0
     for cuando, lineas, metodo in ventas:
         # Si algo se acabó en la barra, se cobra otra cosa: no hay stock negativo.
@@ -1009,14 +1034,14 @@ for ev in noches_ordenadas:
             lineas = [("SIN-AGU-625", 1)]
         if not lineas:
             continue
-        vid = nuevo_id()
+        vid = nuevo_id("VentaBarra")
         total = sum(PRODUCTOS[s]["precio"] * c for s, c in lineas)
         S.fila("VentaBarra", id=vid, sesionCajaId=caja_id, eventoId=ev["id"], totalCentimos=total, metodoPago=metodo,
                creadoEn=cuando)
         for s, c in lineas:
-            S.fila("LineaVentaBarra", id=nuevo_id(), ventaBarraId=vid, productoId=PRODUCTOS[s]["id"], cantidad=c,
+            S.fila("LineaVentaBarra", id=nuevo_id("LineaVentaBarra"), ventaBarraId=vid, productoId=PRODUCTOS[s]["id"], cantidad=c,
                    precioUnitarioCentimos=PRODUCTOS[s]["precio"])
-            S.fila("MovimientoStock", id=nuevo_id(), productoId=PRODUCTOS[s]["id"], salaId=SALA_ID, tipo="VENTA",
+            S.fila("MovimientoStock", id=nuevo_id("MovimientoStock"), productoId=PRODUCTOS[s]["id"], salaId=SALA_ID, tipo="VENTA",
                    cantidad=-c, costeUnitarioCentimos=PRODUCTOS[s]["coste"], referencia=f"Venta {vid}",
                    usuarioId=bartender, creadoEn=cuando)
             stock[s] -= c
@@ -1026,7 +1051,7 @@ for ev in noches_ordenadas:
     if R.random() < 0.22:
         sku = elegir([("CER-CUS-330", 3), ("CER-PIL-330", 3), ("RON-CAR-750", 1), ("PIS-QUE-750", 1), ("PRE-SAN-JAR", 1)])
         if stock[sku] >= 1:
-            S.fila("MovimientoStock", id=nuevo_id(), productoId=PRODUCTOS[sku]["id"], salaId=SALA_ID, tipo="MERMA",
+            S.fila("MovimientoStock", id=nuevo_id("MovimientoStock"), productoId=PRODUCTOS[sku]["id"], salaId=SALA_ID, tipo="MERMA",
                    cantidad=-1, costeUnitarioCentimos=0,
                    referencia=R.choice(["Se rompió en la barra", "Botella rota al reponer", "Devuelta por el cliente"]),
                    usuarioId=bartender, creadoEn=lima(fecha, 25, R.randint(0, 50)))
@@ -1044,13 +1069,13 @@ for ev in noches_ordenadas:
                abiertaEn=lima(fecha, 20, R.randint(35, 55)), cerradaEn=lima(fecha, 26, R.randint(20, 55)))
 
 # La reposición del jueves 8 está pedida y sin llegar.
-oc = nuevo_id()
+oc = nuevo_id("OrdenCompra")
 lineas = [(s, caja_de(s) * R.randint(2, 4)) for s in ("CER-CUS-330", "CER-PIL-330", "CER-COR-210", "CER-COR-355")]
 S.fila("OrdenCompra", id=oc, proveedorId=PROVEEDORES["cerveza"], estado="ENVIADO",
        totalCentimos=sum(PRODUCTOS[s]["coste"] * u for s, u in lineas), esperadoEn=lima(D(2026, 10, 8), 10),
        recibidoEn=None, creadoEn=lima(D(2026, 10, 4), 11, 12))
 for s, u in lineas:
-    S.fila("LineaOrdenCompra", id=nuevo_id(), ordenCompraId=oc, productoId=PRODUCTOS[s]["id"], cantidad=u,
+    S.fila("LineaOrdenCompra", id=nuevo_id("LineaOrdenCompra"), ordenCompraId=oc, productoId=PRODUCTOS[s]["id"], cantidad=u,
            costeUnitarioCentimos=PRODUCTOS[s]["coste"])
 
 for sku, p in PRODUCTOS.items():
@@ -1064,7 +1089,7 @@ for sku, p in PRODUCTOS.items():
 
 for nombre in ("Publicidad", "Limpieza"):
     if nombre not in CAT_GASTO:
-        CAT_GASTO[nombre] = nuevo_id()
+        CAT_GASTO[nombre] = nuevo_id("CategoriaGasto")
         S.fila("CategoriaGasto", id=CAT_GASTO[nombre], nombre=nombre, activo=True)
 
 CACHE = {"DJ Beto": 35000, "La Ruka": 90000, "DJ Chino Vega": 120000, "Kandela Crew": 180000,
@@ -1074,27 +1099,27 @@ for ev in EVENTOS:
     if ev.get("existente") or ev["fecha"] >= HOY:
         continue
     fecha = ev["fecha"]
-    S.fila("Gasto", id=nuevo_id(), eventoId=ev["id"], categoriaId=CAT_GASTO["Caché artista"],
+    S.fila("Gasto", id=nuevo_id("Gasto"), eventoId=ev["id"], categoriaId=CAT_GASTO["Caché artista"],
            importeCentimos=CACHE[ev["cabeza"]], descripcion=f'Caché {ev["cabeza"]}', usuarioId=GERENTE,
            fechaGasto=lima(fecha, 26, 40))
     vigilantes = 5 if ev["asistentes"] < 220 else (7 if ev["asistentes"] < 380 else 8)
-    S.fila("Gasto", id=nuevo_id(), eventoId=ev["id"], categoriaId=CAT_GASTO["Seguridad"],
+    S.fila("Gasto", id=nuevo_id("Gasto"), eventoId=ev["id"], categoriaId=CAT_GASTO["Seguridad"],
            importeCentimos=vigilantes * 9000, descripcion=f"{vigilantes} vigilantes", usuarioId=GERENTE,
            fechaGasto=lima(fecha, 26, 45))
-    S.fila("Gasto", id=nuevo_id(), eventoId=ev["id"], categoriaId=CAT_GASTO["Limpieza"], importeCentimos=12000,
+    S.fila("Gasto", id=nuevo_id("Gasto"), eventoId=ev["id"], categoriaId=CAT_GASTO["Limpieza"], importeCentimos=12000,
            descripcion="Limpieza al cierre (2 personas)", usuarioId=GERENTE, fechaGasto=lima(fecha + dt.timedelta(days=1), 11))
     if "stripper" in ev["titulo"].lower():
-        S.fila("Gasto", id=nuevo_id(), eventoId=ev["id"], categoriaId=CAT_GASTO["Caché artista"], importeCentimos=120000,
+        S.fila("Gasto", id=nuevo_id("Gasto"), eventoId=ev["id"], categoriaId=CAT_GASTO["Caché artista"], importeCentimos=120000,
                descripcion="Show de stripper", usuarioId=GERENTE, fechaGasto=lima(fecha, 26, 40))
     if fecha.weekday() == 5 and R.random() < 0.8:
-        S.fila("Gasto", id=nuevo_id(), eventoId=ev["id"], categoriaId=CAT_GASTO["Publicidad"],
+        S.fila("Gasto", id=nuevo_id("Gasto"), eventoId=ev["id"], categoriaId=CAT_GASTO["Publicidad"],
                importeCentimos=R.choice([15000, 20000, 25000, 30000, 18000]), descripcion="Anuncios en Instagram y Facebook",
                usuarioId=DIRECTOR, fechaGasto=lima(fecha - dt.timedelta(days=4), 17))
 for mes in (6, 7, 8, 9):
-    S.fila("Gasto", id=nuevo_id(), eventoId=None, categoriaId=CAT_GASTO["APDAYC"], importeCentimos=38000,
+    S.fila("Gasto", id=nuevo_id("Gasto"), eventoId=None, categoriaId=CAT_GASTO["APDAYC"], importeCentimos=38000,
            descripcion=f"Licencia APDAYC {['', '', '', '', '', '', 'junio', 'julio', 'agosto', 'septiembre'][mes]}",
            usuarioId=DIRECTOR, fechaGasto=lima(D(2026, mes, 28), 12))
-    S.fila("Gasto", id=nuevo_id(), eventoId=None, categoriaId=CAT_GASTO["Suministros"],
+    S.fila("Gasto", id=nuevo_id("Gasto"), eventoId=None, categoriaId=CAT_GASTO["Suministros"],
            importeCentimos=R.choice([128400, 134900, 141250, 152300]), descripcion="Recibo de luz (SEAL) y agua (SEDAPAR)",
            usuarioId=DIRECTOR, fechaGasto=lima(D(2026, mes, 18), 10))
 
@@ -1122,11 +1147,11 @@ for ev in EVENTOS:
             estado = elegir([("CONFIRMADA", 60), ("SOLICITADA", 40)])
         personas = R.randint(max(3, box["plazas"] - 4), box["plazas"])
         deposito = 0 if estado == "SOLICITADA" else (20000 if box["consumo"] >= 40000 else 10000)
-        S.fila("ReservaBox", id=nuevo_id(), eventoId=ev["id"], boxId=box["id"], clienteId=cliente_id, personas=personas,
+        S.fila("ReservaBox", id=nuevo_id("ReservaBox"), eventoId=ev["id"], boxId=box["id"], clienteId=cliente_id, personas=personas,
                depositoCentimos=deposito, estado=estado, notas=R.choice(NOTAS), creadoEn=creado)
         canal = elegir([("WHATSAPP", 70), ("WEB", 22), ("TELEFONO", 8)])
         resumen = f'Solicitó {box["nombre"]} para {personas} personas en "{ev["titulo"]}".'
-        S.fila("Interaccion", id=nuevo_id(), clienteId=cliente_id, tipo="RESERVA", canal=canal, resumen=resumen,
+        S.fila("Interaccion", id=nuevo_id("Interaccion"), clienteId=cliente_id, tipo="RESERVA", canal=canal, resumen=resumen,
                metadatos=None, ocurrioEn=creado)
 
 # ─────────────────────────── listas del promotor ───────────────────────────
@@ -1148,14 +1173,14 @@ for ev in EVENTOS:
         nombre_cumple = R.choice(MUJERES + HOMBRES)
         listas.append((f"Cumpleaños {nombre_cumple}", R.randint(6, 14)))
     for nombre, filas in listas:
-        lid = nuevo_id()
+        lid = nuevo_id("ListaInvitados")
         S.fila("ListaInvitados", id=lid, eventoId=ev["id"], promotorId=PIERO, nombre=nombre,
                maxInvitados=60 if nombre == "Lista Piero" else 25)
         for _ in range(filas):
             mujer = R.random() < 0.6
             n, a1, _a2 = persona(mujer)
             entro = pasada and R.random() < 0.66
-            S.fila("Invitado", id=nuevo_id(), listaInvitadosId=lid, nombreCompleto=f"{n} {a1}",
+            S.fila("Invitado", id=nuevo_id("Invitado"), listaInvitadosId=lid, nombreCompleto=f"{n} {a1}",
                    personas=elegir([(1, 62), (2, 26), (3, 9), (4, 3)]), entro=entro,
                    entroEn=lima(ev["fecha"], 0, int(normal_acotada(22 * 60 + 50, 40, 21 * 60 + 10, 23 * 60 + 55))) if entro else None)
 
@@ -1178,7 +1203,7 @@ CAMPANIAS = [
 for nombre, canal, segmento, asunto, cuerpo, estado, enviada, enviados, aperturas, clics in CAMPANIAS:
     if segmento not in SEGMENTOS:
         continue
-    S.fila("Campania", id=nuevo_id(), nombre=nombre, canal=canal, segmentoId=SEGMENTOS[segmento], asunto=asunto,
+    S.fila("Campania", id=nuevo_id("Campania"), nombre=nombre, canal=canal, segmentoId=SEGMENTOS[segmento], asunto=asunto,
            cuerpo=cuerpo, estado=estado, programadaEn=lima(D(2026, 10, 12), 19) if estado == "PROGRAMADO" else enviada,
            enviadaEn=enviada, enviados=enviados, aperturas=aperturas, clics=clics, ejecucionId=None,
            creadoEn=(enviada or lima(D(2026, 10, 3), 16, 20)) - dt.timedelta(days=1, hours=R.randint(1, 6)))
@@ -1201,7 +1226,7 @@ for tipo, canal, resumen in QUEJAS * 2:
     cuando = c["ultima"] + dt.timedelta(hours=R.randint(10, 60))
     if cuando >= lima(HOY, 0):
         continue
-    S.fila("Interaccion", id=nuevo_id(), clienteId=c["id"], tipo=tipo, canal=canal, resumen=resumen, metadatos=None,
+    S.fila("Interaccion", id=nuevo_id("Interaccion"), clienteId=c["id"], tipo=tipo, canal=canal, resumen=resumen, metadatos=None,
            ocurrioEn=cuando)
 
 # ─────────────────────────── fichas de cliente ───────────────────────────

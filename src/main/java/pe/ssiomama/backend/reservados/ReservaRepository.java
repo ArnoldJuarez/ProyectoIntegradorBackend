@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface ReservaRepository extends JpaRepository<Reserva, String> {
+public interface ReservaRepository extends JpaRepository<Reserva, Long> {
 
     /**
      * Los ids de las mesas ya pedidas para una noche.
@@ -22,7 +22,7 @@ public interface ReservaRepository extends JpaRepository<Reserva, String> {
             where r.evento.slug = :slug
               and r.estado <> :cancelada
             """)
-    List<String> idsDeMesasPedidas(
+    List<Long> idsDeMesasPedidas(
             @Param("slug") String slug, @Param("cancelada") EstadoDeReserva cancelada);
 
     /**
@@ -39,7 +39,7 @@ public interface ReservaRepository extends JpaRepository<Reserva, String> {
             where r.evento.id = :eventoId
             order by r.estado asc, r.creadaEn asc
             """)
-    List<Reserva> buscarDeLaNoche(@Param("eventoId") String eventoId);
+    List<Reserva> buscarDeLaNoche(@Param("eventoId") Long eventoId);
 
     /** Las reservas de las noches que empiezan después de un instante, la más cercana primero. */
     @Query("""
@@ -74,7 +74,7 @@ public interface ReservaRepository extends JpaRepository<Reserva, String> {
             join fetch r.cliente
             where r.id = :id
             """)
-    Optional<Reserva> buscarCompleta(@Param("id") String id);
+    Optional<Reserva> buscarCompleta(@Param("id") Long id);
 
     /**
      * Quita la solicitud cancelada de un box para una noche.
@@ -88,7 +88,7 @@ public interface ReservaRepository extends JpaRepository<Reserva, String> {
     @Modifying
     @Query("delete from Reserva r where r.evento.id = :eventoId and r.mesa.id = :mesaId and r.estado = :cancelada")
     int borrarCancelada(
-            @Param("eventoId") String eventoId,
-            @Param("mesaId") String mesaId,
+            @Param("eventoId") Long eventoId,
+            @Param("mesaId") Long mesaId,
             @Param("cancelada") EstadoDeReserva cancelada);
 }

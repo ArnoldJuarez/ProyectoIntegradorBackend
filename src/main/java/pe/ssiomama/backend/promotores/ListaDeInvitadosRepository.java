@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import pe.ssiomama.backend.auth.Usuario;
 
-public interface ListaDeInvitadosRepository extends JpaRepository<ListaDeInvitados, String> {
+public interface ListaDeInvitadosRepository extends JpaRepository<ListaDeInvitados, Long> {
 
     /** Todas las listas con su noche, su promotor y sus filas, de la más reciente a la más vieja. */
     @Query("""
@@ -36,7 +36,7 @@ public interface ListaDeInvitadosRepository extends JpaRepository<ListaDeInvitad
             left join fetch l.invitados
             where l.id = :id
             """)
-    java.util.Optional<ListaDeInvitados> buscarConInvitados(@Param("id") String id);
+    java.util.Optional<ListaDeInvitados> buscarConInvitados(@Param("id") Long id);
 
     /** Personal con código de promotor, aunque todavía no tenga ninguna lista. */
     @Query("""

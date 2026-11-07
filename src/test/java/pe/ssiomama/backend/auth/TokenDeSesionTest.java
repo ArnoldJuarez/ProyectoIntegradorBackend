@@ -34,18 +34,23 @@ class TokenDeSesionTest {
                     + ".tN4QyVFi9SAwEbg-V0M9QEuEqhE64XwH_raxKTf57PM";
 
     @Test
-    @DisplayName("emite el mismo token, byte a byte, que Node")
-    void emiteElMismoTokenQueNode() {
-        assertThat(sesion.crear("usr_admin_001", EXP_FIJO)).isEqualTo(TOKEN_DE_NODE);
+    @DisplayName("el cuerpo es el JSON de la sesion, con el id como numero")
+    void cuerpoDelToken() {
+        String token = sesion.crear(7L, EXP_FIJO);
+        String cuerpo = new String(
+                java.util.Base64.getUrlDecoder().decode(token.substring(0, token.lastIndexOf('.'))),
+                java.nio.charset.StandardCharsets.UTF_8);
+        assertThat(cuerpo).isEqualTo("{\"userId\":7,\"exp\":1900000000}");
     }
 
+    /**
+     * La firma es buena (mismo secreto), pero el usuario era un texto que ya no
+     * existe: quien tuviera esa cookie vuelve a iniciar sesión.
+     */
     @Test
-    @DisplayName("acepta un token emitido por Node")
-    void aceptaTokenDeNode() {
-        TokenDeSesion.Contenido c = sesion.leer(TOKEN_DE_NODE);
-        assertThat(c).isNotNull();
-        assertThat(c.userId()).isEqualTo("usr_admin_001");
-        assertThat(c.exp()).isEqualTo(EXP_FIJO);
+    @DisplayName("un token con id de texto del sistema anterior ya no vale")
+    void rechazaTokenConIdDeTexto() {
+        assertThat(sesion.leer(TOKEN_DE_NODE)).isNull();
     }
 
     /**
@@ -55,7 +60,7 @@ class TokenDeSesionTest {
     @Test
     @DisplayName("la firma va completa, sin recortar a 24")
     void laFirmaVaCompleta() {
-        String token = sesion.crear("usr", EXP_FIJO);
+        String token = sesion.crear(7L, EXP_FIJO);
         String firma = token.substring(token.lastIndexOf('.') + 1);
         assertThat(firma).hasSize(43);
     }
@@ -63,16 +68,16 @@ class TokenDeSesionTest {
     @Test
     @DisplayName("un token recien emitido se lee")
     void idaYVuelta() {
-        TokenDeSesion.Contenido c = sesion.leer(sesion.crear("usr_x"));
+        TokenDeSesion.Contenido c = sesion.leer(sesion.crear(12L));
         assertThat(c).isNotNull();
-        assertThat(c.userId()).isEqualTo("usr_x");
+        assertThat(c.userId()).isEqualTo(12L);
         assertThat(c.exp()).isGreaterThan(Instant.now().getEpochSecond());
     }
 
     @Test
     @DisplayName("rechaza una firma manipulada")
     void rechazaFirmaManipulada() {
-        String token = sesion.crear("usr_admin_001", EXP_FIJO);
+        String token = sesion.crear(7L, EXP_FIJO);
         String manipulado = token.substring(0, token.length() - 1)
                 + (token.endsWith("M") ? "N" : "M");
         assertThat(sesion.leer(manipulado)).isNull();
@@ -86,7 +91,7 @@ class TokenDeSesionTest {
     @DisplayName("rechaza un cuerpo reescrito para suplantar a otro usuario")
     void rechazaSuplantacion() {
         String cuerpoFalso = java.util.Base64.getUrlEncoder().withoutPadding()
-                .encodeToString("{\"userId\":\"otro\",\"exp\":1900000000}"
+                .encodeToString("{\"userId\":2,\"exp\":1900000000}"
                         .getBytes(java.nio.charset.StandardCharsets.UTF_8));
         String firmaDeOtro = TOKEN_DE_NODE.substring(TOKEN_DE_NODE.lastIndexOf('.') + 1);
         assertThat(sesion.leer(cuerpoFalso + "." + firmaDeOtro)).isNull();
@@ -96,7 +101,7 @@ class TokenDeSesionTest {
     @DisplayName("rechaza un token caducado aunque la firma sea buena")
     void rechazaCaducado() {
         // Firmado con el secreto correcto, pero con caducidad en 2001.
-        String caducado = sesion.crear("usr_admin_001", 1_000_000_000L);
+        String caducado = sesion.crear(7L, 1_000_000_000L);
         assertThat(sesion.leer(caducado)).isNull();
     }
 
@@ -113,7 +118,7 @@ class TokenDeSesionTest {
     @Test
     @DisplayName("un token firmado con otro secreto no vale")
     void rechazaOtroSecreto() {
-        String ajeno = new TokenDeSesion("otro-secreto-distinto").crear("usr_admin_001", EXP_FIJO);
+        String ajeno = new TokenDeSesion("otro-secreto-distinto").crear(7L, EXP_FIJO);
         assertThat(sesion.leer(ajeno)).isNull();
     }
 }

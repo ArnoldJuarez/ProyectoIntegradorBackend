@@ -53,8 +53,13 @@ public class FirmaDeEntrada {
         this.secreto = secreto.getBytes(StandardCharsets.UTF_8);
     }
 
-    /** El HMAC del id, en base64url sin relleno y recortado. */
-    private String firmar(String idEntrada) {
+    /**
+     * El HMAC del texto, en base64url sin relleno y recortado.
+     *
+     * <p>Visible en el paquete para que el test compruebe el algoritmo contra
+     * vectores calculados con la implementación de Node.
+     */
+    String firmar(String idEntrada) {
         try {
             Mac mac = Mac.getInstance(ALGORITMO);
             mac.init(new SecretKeySpec(secreto, ALGORITMO));
@@ -73,8 +78,9 @@ public class FirmaDeEntrada {
      *
      * @return {@code id.firma}
      */
-    public String codificar(String idEntrada) {
-        return idEntrada + "." + firmar(idEntrada);
+    public String codificar(Long idEntrada) {
+        String id = idEntrada.toString();
+        return id + "." + firmar(id);
     }
 
     /**
@@ -84,7 +90,7 @@ public class FirmaDeEntrada {
      * <p>Se parte por el <b>último</b> punto y no por el primero: nada impide que
      * un id contenga puntos, y partir por el primero rompería esos códigos.
      */
-    public String decodificar(String codigo) {
+    public Long decodificar(String codigo) {
         if (codigo == null) {
             return null;
         }
@@ -107,6 +113,12 @@ public class FirmaDeEntrada {
             return null;
         }
 
-        return idEntrada;
+        // Un QR emitido antes de los ids numéricos (con un cuid o un UUID)
+        // tiene la firma bien hecha, pero su id ya no existe: se rechaza aquí.
+        try {
+            return Long.valueOf(idEntrada);
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 }

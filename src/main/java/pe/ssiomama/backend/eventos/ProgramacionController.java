@@ -69,7 +69,7 @@ public class ProgramacionController {
             @Size(min = 3, max = 160, message = "El título tiene entre 3 y 160 caracteres")
             String titulo,
             @Size(max = 2000, message = "La descripción es demasiado larga") String descripcion,
-            @NotBlank(message = "Elige una sala") String salaId,
+            @NotNull(message = "Elige una sala") Long salaId,
             @NotNull(message = "Falta la hora de apertura") Instant puertasA,
             @NotNull(message = "Falta la hora de cierre") Instant terminaA,
             @Min(value = 0, message = "La edad mínima no puede ser negativa")
@@ -81,7 +81,7 @@ public class ProgramacionController {
             @Size(max = 500) String portada,
             @Size(max = 500, message = "La dirección del video es demasiado larga") String video,
             @Size(max = 10, message = "Como mucho diez artistas en el cartel")
-            List<String> artistaIds) {}
+            List<Long> artistaIds) {}
 
     public record FormularioDeTipo(
             @NotBlank(message = "Falta el nombre")
@@ -103,14 +103,14 @@ public class ProgramacionController {
     // ── Lo que sale ───────────────────────────────────────────────
 
     /** Lo mínimo para volver a la ficha después de guardar. */
-    public record NocheGuardada(String id, String slug, String titulo) {
+    public record NocheGuardada(Long id, String slug, String titulo) {
 
         static NocheGuardada de(Evento e) {
             return new NocheGuardada(e.getId(), e.getSlug(), e.getTitulo());
         }
     }
 
-    public record TipoGuardado(String id, String nombre, int cantidad, boolean activo) {
+    public record TipoGuardado(Long id, String nombre, int cantidad, boolean activo) {
 
         static TipoGuardado de(TipoDeEntrada t) {
             return new TipoGuardado(t.getId(), t.getNombre(), t.getCantidad(), t.isActivo());
@@ -126,9 +126,9 @@ public class ProgramacionController {
     public record TipoQuitado(boolean retirado, String mensaje) {}
 
     /** Las salas y los artistas que hay para elegir en el formulario. */
-    public record SalaParaElegir(String id, String nombre, int aforo) {}
+    public record SalaParaElegir(Long id, String nombre, int aforo) {}
 
-    public record ArtistaParaElegir(String id, String nombre, String genero) {}
+    public record ArtistaParaElegir(Long id, String nombre, String genero) {}
 
     public record OpcionesDeProgramacion(
             List<SalaParaElegir> salas, List<ArtistaParaElegir> artistas) {}
@@ -209,13 +209,13 @@ public class ProgramacionController {
     @PutMapping("/entradas/{tipoId}")
     @Transactional
     public TipoGuardado editarTipo(
-            @PathVariable String tipoId, @Valid @RequestBody FormularioDeTipo formulario) {
+            @PathVariable Long tipoId, @Valid @RequestBody FormularioDeTipo formulario) {
         return TipoGuardado.de(gestion.editarTipo(tipoId, aDatos(formulario)));
     }
 
     @DeleteMapping("/entradas/{tipoId}")
     @Transactional
-    public TipoQuitado quitarTipo(@PathVariable String tipoId) {
+    public TipoQuitado quitarTipo(@PathVariable Long tipoId) {
         boolean retirado = gestion.quitarTipo(tipoId);
 
         return new TipoQuitado(

@@ -3,8 +3,9 @@ package pe.ssiomama.backend.gastos;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Table;
-import java.util.UUID;
 
 /**
  * A qué se va el dinero: caché de artista, seguridad, limpieza, APDAYC…
@@ -18,8 +19,9 @@ import java.util.UUID;
 public class CategoriaDeGasto {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    private String id;
+    private Long id;
 
     @Column(name = "nombre", nullable = false)
     private String nombre;
@@ -34,13 +36,12 @@ public class CategoriaDeGasto {
 
     static CategoriaDeGasto crear(String nombre) {
         CategoriaDeGasto c = new CategoriaDeGasto();
-        c.id = UUID.randomUUID().toString();
         c.nombre = nombre.trim();
         c.activa = true;
         return c;
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 

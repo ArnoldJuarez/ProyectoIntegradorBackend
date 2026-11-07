@@ -49,7 +49,7 @@ public class AuthController {
             @NotBlank(message = "Falta la contraseña") String password) {}
 
     /** Lo que se le cuenta al frontend. El hash no sale de aquí jamás. */
-    public record Sesion(String id, String nombre, String email, Rol rol) {
+    public record Sesion(Long id, String nombre, String email, Rol rol) {
         static Sesion de(Usuario u) {
             return new Sesion(u.getId(), u.getNombre(), u.getEmail(), u.getRol());
         }

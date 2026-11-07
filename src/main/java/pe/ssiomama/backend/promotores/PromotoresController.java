@@ -79,7 +79,7 @@ public class PromotoresController {
     /** Un promotor con su desglose noche a noche, lo pendiente y lo pagado. */
     @GetMapping("/api/promotores/{id}")
     @Transactional(readOnly = true)
-    public FichaDePromotor ficha(@PathVariable String id) {
+    public FichaDePromotor ficha(@PathVariable Long id) {
         Usuario u = usuarios.findById(id)
                 .filter(Usuario::esPromotor)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ese promotor no existe."));
@@ -88,14 +88,14 @@ public class PromotoresController {
 
     @PostMapping("/api/promotores/{id}/liquidaciones")
     public ResponseEntity<LiquidacionEnFicha> liquidar(
-            @PathVariable String id, @Valid @RequestBody Pago p, @AuthenticationPrincipal Usuario quien) {
+            @PathVariable Long id, @Valid @RequestBody Pago p, @AuthenticationPrincipal Usuario quien) {
         Liquidacion l = comisiones.liquidar(
                 id, p.hasta(), p.metodoDePago(), p.referencia(), p.nota(), p.ajusteCentimos(), quien);
         return ResponseEntity.status(HttpStatus.CREATED).body(LiquidacionEnFicha.de(l, quien.getNombre()));
     }
 
     @DeleteMapping("/api/promotores/liquidaciones/{id}")
-    public ResponseEntity<Void> anular(@PathVariable String id) {
+    public ResponseEntity<Void> anular(@PathVariable Long id) {
         comisiones.anular(id);
         return ResponseEntity.noContent().build();
     }

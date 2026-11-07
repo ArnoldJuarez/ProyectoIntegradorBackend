@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 /** Acceso a {@code "Campania"}. */
-public interface CampaniaRepository extends JpaRepository<Campania, String> {
+public interface CampaniaRepository extends JpaRepository<Campania, Long> {
 
     /**
      * Las campañas de la más reciente a la más antigua, con su segmento cargado.
@@ -24,8 +24,8 @@ public interface CampaniaRepository extends JpaRepository<Campania, String> {
     List<Campania> buscarRecientes();
 
     @Query("select c from Campania c join fetch c.segmento where c.id = :id")
-    Optional<Campania> buscarConSegmento(@Param("id") String id);
+    Optional<Campania> buscarConSegmento(@Param("id") Long id);
 
     /** Cuántas campañas apuntan a un segmento. Decide si se puede borrar. */
-    long countBySegmentoId(String segmentoId);
+    long countBySegmentoId(Long segmentoId);
 }

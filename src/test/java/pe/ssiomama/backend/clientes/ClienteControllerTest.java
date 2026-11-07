@@ -133,10 +133,10 @@ class ClienteControllerTest {
         JsonNode lista = json.readTree(pedir("/api/clientes?limite=100", sesion).getBody());
 
         // Alguien que ya haya venido, para que la media diga algo.
-        String id = null;
+        Long id = null;
         for (JsonNode c : lista) {
             if (c.get("visitas").asInt() > 0) {
-                id = c.get("id").asText();
+                id = c.get("id").asLong();
                 break;
             }
         }
@@ -159,7 +159,7 @@ class ClienteControllerTest {
         for (JsonNode c : lista) {
             if (c.get("visitas").asInt() == 0) {
                 JsonNode ficha =
-                        json.readTree(pedir("/api/clientes/" + c.get("id").asText(), sesion).getBody());
+                        json.readTree(pedir("/api/clientes/" + c.get("id").asLong(), sesion).getBody());
                 assertThat(ficha.get("gastoMedioCentimos").asInt()).isZero();
                 return;
             }

@@ -130,7 +130,7 @@ class CajaControllerTest {
                 continue;
             }
             JsonNode ficha = json.readTree(
-                    pedir("/api/caja/arqueos/" + a.get("id").asText(), sesion).getBody());
+                    pedir("/api/caja/arqueos/" + a.get("id").asLong(), sesion).getBody());
 
             // Lo que se espera en el cajon = fondo + efectivo cobrado, y nada mas.
             assertThat((long) a.get("aperturaCentimos").asInt() + ficha.get("efectivoCentimos").asLong())
@@ -180,12 +180,12 @@ class CajaControllerTest {
     @DisplayName("la ficha desglosa lo cobrado por metodo de pago")
     void laFichaDesglosaPorMetodo() throws Exception {
         HttpHeaders sesion = admin();
-        String id = json.readTree(pedir("/api/caja/arqueos", sesion).getBody())
-                .get(0).get("id").asText();
+        Long id = json.readTree(pedir("/api/caja/arqueos", sesion).getBody())
+                .get(0).get("id").asLong();
 
         JsonNode ficha = json.readTree(pedir("/api/caja/arqueos/" + id, sesion).getBody());
 
-        assertThat(ficha.get("arqueo").get("id").asText()).isEqualTo(id);
+        assertThat(ficha.get("arqueo").get("id").asLong()).isEqualTo(id);
         assertThat(ficha.get("porMetodoDePago").isArray()).isTrue();
         assertThat(ficha.get("cobros").asInt()).isGreaterThanOrEqualTo(0);
     }
@@ -199,8 +199,8 @@ class CajaControllerTest {
     @DisplayName("el efectivo y los otros medios suman el desglose entero")
     void efectivoYOtrosSumanElTotal() throws Exception {
         HttpHeaders sesion = admin();
-        String id = json.readTree(pedir("/api/caja/arqueos", sesion).getBody())
-                .get(0).get("id").asText();
+        Long id = json.readTree(pedir("/api/caja/arqueos", sesion).getBody())
+                .get(0).get("id").asLong();
 
         JsonNode ficha = json.readTree(pedir("/api/caja/arqueos/" + id, sesion).getBody());
 

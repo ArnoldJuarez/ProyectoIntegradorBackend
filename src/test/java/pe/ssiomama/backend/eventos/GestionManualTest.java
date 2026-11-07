@@ -44,7 +44,7 @@ class GestionManualTest {
     @Autowired
     private JdbcTemplate jdbc;
 
-    private DatosDeNoche noche(String titulo, EstadoDeEvento estado, String video, List<String> artistas) {
+    private DatosDeNoche noche(String titulo, EstadoDeEvento estado, String video, List<Long> artistas) {
         Instant puertas = Instant.parse("2027-04-09T02:00:00Z");
         return new DatosDeNoche(titulo, "De prueba.", salas.findAllByOrderByAforoDesc().getFirst().getId(),
                 puertas, puertas.plus(Duration.ofHours(6)), 18, null, estado, null, video, artistas);
@@ -82,10 +82,10 @@ class GestionManualTest {
     @Test
     @DisplayName("un borrador sin historia se borra, con sus entradas y su cartel")
     void borraUnBorrador() {
-        String artista = jdbc.queryForObject("select id from \"Artista\" order by nombre limit 1", String.class);
+        Long artista = jdbc.queryForObject("select id from \"Artista\" order by nombre limit 1", Long.class);
         var creada = gestion.crear(noche("Prueba para borrar", EstadoDeEvento.BORRADOR, null, List.of(artista)));
         gestion.anadirTipo(creada.getSlug(), new DatosDeTipo("General", null, 2000, 50, 4, 0, true));
-        String id = creada.getId();
+        Long id = creada.getId();
 
         gestion.borrar(creada.getSlug());
         eventos.flush();
@@ -152,7 +152,7 @@ class GestionManualTest {
     @Test
     @DisplayName("quien ya tocó no se borra; quien no, sí")
     void borrarArtistas() {
-        String conNoches = jdbc.queryForObject("select \"artistaId\" from \"EventoArtista\" limit 1", String.class);
+        Long conNoches = jdbc.queryForObject("select \"artistaId\" from \"EventoArtista\" limit 1", Long.class);
         assertThatThrownBy(() -> catalogo.borrar(conNoches))
                 .isInstanceOf(EventoRechazado.class)
                 .hasMessageContaining("cartel");

@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 /** Acceso a {@code "Puerta"}. */
-public interface PuertaRepository extends JpaRepository<Puerta, String> {
+public interface PuertaRepository extends JpaRepository<Puerta, Long> {
 
     /**
      * La puerta por la que se entra a una sala.
@@ -30,8 +30,8 @@ public interface PuertaRepository extends JpaRepository<Puerta, String> {
             order by p.nombre asc
             limit 1
             """)
-    Optional<Puerta> buscarEntradaDe(@Param("salaId") String salaId);
+    Optional<Puerta> buscarEntradaDe(@Param("salaId") Long salaId);
 
     /** Todas las de una sala, emergencias incluidas: el plano las pinta todas. */
-    List<Puerta> findBySalaIdOrderByNombreAsc(String salaId);
+    List<Puerta> findBySalaIdOrderByNombreAsc(Long salaId);
 }

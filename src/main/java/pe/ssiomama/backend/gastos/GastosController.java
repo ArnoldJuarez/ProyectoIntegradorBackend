@@ -1,6 +1,7 @@
 package pe.ssiomama.backend.gastos;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -61,7 +62,7 @@ public class GastosController {
     }
 
     public record FormularioDeGasto(
-            @NotBlank(message = "Elige la categoría") String categoriaId,
+            @NotNull(message = "Elige la categoría") Long categoriaId,
             String eventoSlug,
             @Min(value = 1, message = "El importe tiene que ser mayor que cero")
             @Max(value = 100_000_000, message = "Ese importe no parece real")
@@ -74,9 +75,9 @@ public class GastosController {
             String nombre) {}
 
     public record GastoEnLista(
-            String id,
+            Long id,
             Instant fecha,
-            String categoriaId,
+            Long categoriaId,
             String categoria,
             int importeCentimos,
             String descripcion,
@@ -103,7 +104,7 @@ public class GastosController {
     public record GastosDelMes(
             String mes, long totalCentimos, List<TotalDeCategoria> porCategoria, List<GastoEnLista> gastos) {}
 
-    public record CategoriaParaElegir(String id, String nombre, boolean activa) {}
+    public record CategoriaParaElegir(Long id, String nombre, boolean activa) {}
 
     public record NocheParaElegir(String slug, String titulo, Instant empiezaA) {}
 
@@ -161,13 +162,13 @@ public class GastosController {
 
     @PutMapping("/{id}")
     @Transactional
-    public GastoEnLista corregir(@PathVariable String id, @Valid @RequestBody FormularioDeGasto f) {
+    public GastoEnLista corregir(@PathVariable Long id, @Valid @RequestBody FormularioDeGasto f) {
         return GastoEnLista.de(gestion.corregir(id, aDatos(f)));
     }
 
     @DeleteMapping("/{id}")
     @Transactional
-    public ResponseEntity<Void> borrar(@PathVariable String id) {
+    public ResponseEntity<Void> borrar(@PathVariable Long id) {
         gestion.borrar(id);
         return ResponseEntity.noContent().build();
     }

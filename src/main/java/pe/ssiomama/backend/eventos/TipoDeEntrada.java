@@ -4,11 +4,12 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
-import java.util.UUID;
 
 /**
  * Un tipo de entrada de una noche: Early Bird, General, VIP — tabla
@@ -19,8 +20,9 @@ import java.util.UUID;
 public class TipoDeEntrada {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    private String id;
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "eventoId", nullable = false)
@@ -87,7 +89,6 @@ public class TipoDeEntrada {
             boolean activo) {
 
         TipoDeEntrada t = new TipoDeEntrada();
-        t.id = UUID.randomUUID().toString();
         t.evento = evento;
         t.nombre = nombre;
         t.descripcion = descripcion == null || descripcion.isBlank() ? null : descripcion.trim();
@@ -190,7 +191,7 @@ public class TipoDeEntrada {
         return ventaHasta == null || !ahora.isAfter(ventaHasta);
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 

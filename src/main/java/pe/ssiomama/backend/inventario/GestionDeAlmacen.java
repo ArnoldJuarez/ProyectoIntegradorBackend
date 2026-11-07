@@ -59,7 +59,7 @@ public class GestionDeAlmacen {
 
     public record DatosDeProducto(
             String nombre,
-            String categoriaId,
+            Long categoriaId,
             UnidadDeProducto unidad,
             int costeCentimos,
             int precioCentimos,
@@ -75,14 +75,14 @@ public class GestionDeAlmacen {
      */
     public record DatosDeMovimiento(
             TipoDeMovimiento tipo,
-            String salaId,
+            Long salaId,
             int unidades,
             Integer costeUnitarioCentimos,
             String nota) {}
 
     /** Cómo queda el producto después de moverlo. */
     public record MovimientoHecho(
-            String movimientoId, String producto, int cantidad, int stockResultante) {}
+            Long movimientoId, String producto, int cantidad, int stockResultante) {}
 
     // ── Productos ─────────────────────────────────────────────────
 
@@ -109,7 +109,7 @@ public class GestionDeAlmacen {
 
     /** Cambia la ficha. El SKU y el stock no se tocan desde aquí. */
     @Transactional
-    public Producto editar(String productoId, DatosDeProducto datos) {
+    public Producto editar(Long productoId, DatosDeProducto datos) {
         comprobar(datos);
 
         Producto producto = productos.findById(productoId)
@@ -140,7 +140,7 @@ public class GestionDeAlmacen {
      * acabarían diciendo cosas distintas.
      */
     @Transactional
-    public MovimientoHecho mover(String productoId, DatosDeMovimiento datos, Usuario quien) {
+    public MovimientoHecho mover(Long productoId, DatosDeMovimiento datos, Usuario quien) {
         if (!A_MANO.contains(datos.tipo())) {
             // Un mensaje que explica el porqué, no un «tipo no válido».
             throw new AlmacenRechazado(

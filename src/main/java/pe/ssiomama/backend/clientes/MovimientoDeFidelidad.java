@@ -4,11 +4,12 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
-import java.util.UUID;
 
 /**
  * Un apunte de puntos — tabla {@code "MovimientoFidelidad"}.
@@ -33,8 +34,9 @@ public class MovimientoDeFidelidad {
     private static final int CENTIMOS_POR_PUNTO = 100;
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    private String id;
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "clienteId", nullable = false)
@@ -56,7 +58,7 @@ public class MovimientoDeFidelidad {
      * apuntar. Un ajuste manual no tiene pedido y la columna admite nulos.
      */
     @Column(name = "pedidoId")
-    private String pedidoId;
+    private Long pedidoId;
 
     @Column(name = "creadoEn", nullable = false)
     private Instant creadoEn;
@@ -73,9 +75,8 @@ public class MovimientoDeFidelidad {
      * puntos por 24,50 soles.
      */
     public static MovimientoDeFidelidad porCompra(
-            Cliente cliente, String idDelPedido, String codigoDelPedido, int totalCentimos) {
+            Cliente cliente, Long idDelPedido, String codigoDelPedido, int totalCentimos) {
         MovimientoDeFidelidad m = new MovimientoDeFidelidad();
-        m.id = UUID.randomUUID().toString();
         m.cliente = cliente;
         m.puntos = Math.round((float) totalCentimos / CENTIMOS_POR_PUNTO);
         m.motivo = "Compra " + codigoDelPedido;
@@ -84,7 +85,7 @@ public class MovimientoDeFidelidad {
         return m;
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 
@@ -100,7 +101,7 @@ public class MovimientoDeFidelidad {
         return motivo;
     }
 
-    public String getPedidoId() {
+    public Long getPedidoId() {
         return pedidoId;
     }
 

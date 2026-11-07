@@ -124,7 +124,7 @@ public class PanelController {
     }
 
     public record ArqueoEnPortada(
-            String id,
+            Long id,
             String sala,
             String responsable,
             Integer diferenciaCentimos,
@@ -143,7 +143,7 @@ public class PanelController {
     }
 
     public record ReposicionEnPortada(
-            String productoId, String producto, int quedan, int umbral, int faltan) {
+            Long productoId, String producto, int quedan, int umbral, int faltan) {
 
         static ReposicionEnPortada de(Producto p) {
             return new ReposicionEnPortada(

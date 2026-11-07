@@ -3,7 +3,7 @@ package pe.ssiomama.backend.auth;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface UsuarioRepository extends JpaRepository<Usuario, String> {
+public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
     /**
      * El correo se guarda tal cual se escribió, así que la búsqueda ignora

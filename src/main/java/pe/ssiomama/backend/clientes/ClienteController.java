@@ -43,7 +43,7 @@ public class ClienteController {
     }
 
     public record ClienteEnLista(
-            String id,
+            Long id,
             String nombre,
             String email,
             String telefono,
@@ -66,7 +66,7 @@ public class ClienteController {
     }
 
     public record LineaDeHistorial(
-            String id, TipoDeInteraccion tipo, CanalDeInteraccion canal, String resumen, Instant cuando) {
+            Long id, TipoDeInteraccion tipo, CanalDeInteraccion canal, String resumen, Instant cuando) {
 
         static LineaDeHistorial de(Interaccion i) {
             return new LineaDeHistorial(
@@ -75,7 +75,7 @@ public class ClienteController {
     }
 
     public record FichaDeCliente(
-            String id,
+            Long id,
             String nombre,
             String email,
             String telefono,
@@ -115,7 +115,7 @@ public class ClienteController {
 
     @GetMapping("/{id}")
     @Transactional(readOnly = true)
-    public ResponseEntity<FichaDeCliente> ficha(@PathVariable String id) {
+    public ResponseEntity<FichaDeCliente> ficha(@PathVariable Long id) {
         Cliente c = clientes.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "No existe ese cliente."));

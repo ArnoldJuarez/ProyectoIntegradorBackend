@@ -42,8 +42,13 @@ class CuadreDeAforoTest {
     @Autowired
     private JdbcTemplate jdbc;
 
+    /**
+     * Solo cuentan los pedidos vivos (pendientes o pagados): uno cancelado o
+     * devuelto devuelve su cupo ({@code TipoDeEntrada.liberarCupo}), así que
+     * sus líneas ya no ocupan sitio aunque sigan en la base como historia.
+     */
     @Test
-    @DisplayName("vendidas coincide con la suma de las lineas de pedido")
+    @DisplayName("vendidas coincide con la suma de las lineas de los pedidos vivos")
     void elContadorCuadraConLosPedidos() {
         List<Map<String, Object>> filas = jdbc.queryForList(
                 """
@@ -54,8 +59,11 @@ class CuadreDeAforoTest {
                 from "TipoEntrada" t
                 join "Evento" v on v.id = t."eventoId"
                 left join (
-                  select "tipoEntradaId" as tipo, sum(cantidad) as suma
-                  from "LineaPedido" group by "tipoEntradaId"
+                  select l."tipoEntradaId" as tipo, sum(l.cantidad) as suma
+                  from "LineaPedido" l
+                  join "Pedido" p on p.id = l."pedidoId"
+                  where p.estado not in ('CANCELADO', 'DEVUELTO')
+                  group by l."tipoEntradaId"
                 ) x on x.tipo = t.id
                 order by v.slug, t.nombre
                 """);

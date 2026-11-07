@@ -55,7 +55,7 @@ class CompraHttpTest {
     static void crearLaNoche(@Autowired JdbcTemplate jdbc) {
         // Por si una ejecución anterior se cortó a mitad.
         NocheDePrueba.limpiar(jdbc);
-        String eventoId = NocheDePrueba.crear(jdbc, "Noche de prueba · compra por HTTP");
+        Long eventoId = NocheDePrueba.crear(jdbc, "Noche de prueba · compra por HTTP");
         NocheDePrueba.anadirTipoDeEntrada(jdbc, eventoId, "General", 1800, 400);
         NocheDePrueba.anadirTipoDeEntrada(jdbc, eventoId, "VIP", 3500, 60);
         NOCHE = NocheDePrueba.slugDe(jdbc, eventoId);
@@ -128,14 +128,14 @@ class CompraHttpTest {
 
     // ── Apoyo ─────────────────────────────────────────────────────
 
-    private String idDeTipo(String slug, String nombre) {
+    private Long idDeTipo(String slug, String nombre) {
         return jdbc.queryForObject(
                 """
                 select t.id from "TipoEntrada" t
                 join "Evento" v on v.id = t."eventoId"
                 where v.slug = ? and t.nombre = ?
                 """,
-                String.class,
+                Long.class,
                 slug,
                 nombre);
     }
@@ -148,10 +148,10 @@ class CompraHttpTest {
                 "/api/publico/pedidos", new HttpEntity<>(cuerpo, cabecera), String.class);
     }
 
-    private String peticionDe(String tipoId, int cantidad) {
+    private String peticionDe(Long tipoId, int cantidad) {
         return """
                 {"slug":"%s","nombre":"Ana","apellido":"Prueba","email":"%s",
-                 "telefono":"999888777","lineas":[{"tipoDeEntradaId":"%s","cantidad":%d}]}
+                 "telefono":"999888777","lineas":[{"tipoDeEntradaId":%s,"cantidad":%d}]}
                 """
                 .formatted(NOCHE, MARCA.formatted(System.nanoTime()), tipoId, cantidad);
     }
@@ -206,7 +206,7 @@ class CompraHttpTest {
         String correo = MARCA.formatted(System.nanoTime());
         String cuerpo = """
                 {"slug":"%s","nombre":"Ana","apellido":"Prueba","email":"%s",
-                 "telefono":"999888777","lineas":[{"tipoDeEntradaId":"%s","cantidad":1}]}
+                 "telefono":"999888777","lineas":[{"tipoDeEntradaId":%s,"cantidad":1}]}
                 """
                 .formatted(NOCHE, correo, idDeTipo(NOCHE, "General"));
 
@@ -227,7 +227,7 @@ class CompraHttpTest {
     @Test
     @DisplayName("un rechazo del negocio es 409 y trae el motivo escrito")
     void rechazoLegible() throws Exception {
-        String vip = idDeTipo(NOCHE, "VIP");
+        Long vip = idDeTipo(NOCHE, "VIP");
         int maximo = jdbc.queryForObject(
                 "select \"maxPorPedido\" from \"TipoEntrada\" where id = ?", Integer.class, vip);
 
@@ -258,7 +258,7 @@ class CompraHttpTest {
     void correoMalo() throws Exception {
         String cuerpo = """
                 {"slug":"%s","nombre":"Ana","email":"esto-no-es-un-correo",
-                 "telefono":"999888777","lineas":[{"tipoDeEntradaId":"%s","cantidad":1}]}
+                 "telefono":"999888777","lineas":[{"tipoDeEntradaId":%s,"cantidad":1}]}
                 """
                 .formatted(NOCHE, idDeTipo(NOCHE, "General"));
 

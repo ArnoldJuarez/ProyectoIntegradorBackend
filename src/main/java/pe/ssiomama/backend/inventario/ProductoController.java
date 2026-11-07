@@ -37,7 +37,7 @@ public class ProductoController {
      * pinta nada en una pantalla que puede acabar abierta en la barra.
      */
     public record ProductoResumen(
-            String id,
+            Long id,
             String sku,
             String nombre,
             String categoria,

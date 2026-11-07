@@ -9,7 +9,7 @@ import org.springframework.data.repository.query.Param;
 /** Acceso a {@code "EventoArtista"}: quién toca en cada noche. */
 public interface ActuacionRepository extends JpaRepository<Actuacion, ActuacionId> {
 
-    List<Actuacion> findByEventoIdOrderByCabezaDeCartelDescArtistaNombreAsc(String eventoId);
+    List<Actuacion> findByEventoIdOrderByCabezaDeCartelDescArtistaNombreAsc(Long eventoId);
 
     /**
      * Vacía el cartel de una noche.
@@ -23,7 +23,7 @@ public interface ActuacionRepository extends JpaRepository<Actuacion, ActuacionI
      */
     @Modifying
     @Query("delete from Actuacion a where a.evento.id = :eventoId")
-    void borrarElCartelDe(@Param("eventoId") String eventoId);
+    void borrarElCartelDe(@Param("eventoId") Long eventoId);
 
     /**
      * El cartel de una noche como entidades. Para borrarlo junto con la noche
@@ -31,5 +31,5 @@ public interface ActuacionRepository extends JpaRepository<Actuacion, ActuacionI
      * {@link GestionDeEventos#borrar}.
      */
     @Query("select a from Actuacion a where a.evento.id = :eventoId")
-    java.util.List<Actuacion> buscarDeLaNoche(@Param("eventoId") String eventoId);
+    java.util.List<Actuacion> buscarDeLaNoche(@Param("eventoId") Long eventoId);
 }

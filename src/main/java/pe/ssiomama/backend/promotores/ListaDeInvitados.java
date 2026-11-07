@@ -4,6 +4,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
@@ -25,8 +27,9 @@ import pe.ssiomama.backend.eventos.Evento;
 public class ListaDeInvitados {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    private String id;
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "eventoId", nullable = false)
@@ -52,7 +55,6 @@ public class ListaDeInvitados {
 
     static ListaDeInvitados abrir(Evento evento, Usuario promotor, String nombre, int maxInvitados) {
         ListaDeInvitados l = new ListaDeInvitados();
-        l.id = java.util.UUID.randomUUID().toString();
         l.evento = evento;
         l.promotor = promotor;
         l.nombre = nombre.trim();
@@ -75,7 +77,7 @@ public class ListaDeInvitados {
         return invitados.stream().filter(Invitado::isEntro).mapToInt(Invitado::getPersonas).sum();
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 

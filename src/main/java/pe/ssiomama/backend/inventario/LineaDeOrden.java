@@ -4,10 +4,11 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import java.util.UUID;
 
 /** Un producto dentro de un pedido a proveedor — tabla {@code "LineaOrdenCompra"}. */
 @Entity
@@ -15,8 +16,9 @@ import java.util.UUID;
 public class LineaDeOrden {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    private String id;
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "ordenCompraId", nullable = false)
@@ -39,7 +41,6 @@ public class LineaDeOrden {
 
     static LineaDeOrden de(OrdenDeCompra orden, Producto producto, int cantidad, int costeUnitarioCentimos) {
         LineaDeOrden l = new LineaDeOrden();
-        l.id = UUID.randomUUID().toString();
         l.orden = orden;
         l.producto = producto;
         l.cantidad = cantidad;
@@ -51,7 +52,7 @@ public class LineaDeOrden {
         return (long) cantidad * costeUnitarioCentimos;
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 

@@ -3,6 +3,8 @@ package pe.ssiomama.backend.inventario;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Table;
 
 /**
@@ -18,14 +20,11 @@ import jakarta.persistence.Table;
 @Table(name = "CategoriaProducto")
 public class CategoriaDeProducto {
 
-    /**
-     * Lo genera Prisma con {@code cuid()} desde la aplicación, no la base: no hay
-     * secuencia ni {@code DEFAULT} detrás, así que aquí el id es asignado y no
-     * lleva {@code @GeneratedValue}.
-     */
+    /** Lo numera la base: columna identity (1, 2, 3…). */
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    private String id;
+    private Long id;
 
     @Column(name = "nombre", nullable = false, unique = true)
     private String nombre;
@@ -34,7 +33,7 @@ public class CategoriaDeProducto {
         // Hibernate necesita un constructor sin argumentos.
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 

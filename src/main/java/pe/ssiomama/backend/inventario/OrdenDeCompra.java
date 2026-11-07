@@ -7,6 +7,8 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
@@ -14,7 +16,6 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -38,8 +39,9 @@ import org.hibernate.type.SqlTypes;
 public class OrdenDeCompra {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    private String id;
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "proveedorId", nullable = false)
@@ -72,7 +74,6 @@ public class OrdenDeCompra {
 
     static OrdenDeCompra borrador(Proveedor proveedor, Instant esperadoEn) {
         OrdenDeCompra o = new OrdenDeCompra();
-        o.id = UUID.randomUUID().toString();
         o.proveedor = proveedor;
         o.estado = EstadoDeOrden.BORRADOR;
         o.esperadoEn = esperadoEn;
@@ -108,7 +109,7 @@ public class OrdenDeCompra {
         this.estado = EstadoDeOrden.CANCELADO;
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 
@@ -140,8 +141,8 @@ public class OrdenDeCompra {
         return lineas;
     }
 
-    /** Las primeras letras del id: lo que se dicta por teléfono al proveedor. */
+    /** El número de la orden con ceros delante (OC-0007): lo que se dicta por teléfono al proveedor. */
     public String getCodigo() {
-        return "OC-" + id.substring(0, 6).toUpperCase();
+        return "OC-" + String.format("%04d", id);
     }
 }

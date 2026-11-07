@@ -4,7 +4,7 @@ import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
-public interface MesaVipRepository extends JpaRepository<MesaVip, String> {
+public interface MesaVipRepository extends JpaRepository<MesaVip, Long> {
 
     /**
      * Los reservados que se pueden pedir, con su zona ya cargada.

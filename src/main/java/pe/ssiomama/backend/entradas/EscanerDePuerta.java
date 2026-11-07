@@ -51,6 +51,10 @@ public class EscanerDePuerta {
 
     private static final DateTimeFormatter HORA = DateTimeFormatter.ofPattern("HH:mm");
 
+    /** «viernes 6 de noviembre», para decir desde cuándo vale una entrada. */
+    private static final DateTimeFormatter DIA =
+            DateTimeFormatter.ofPattern("EEEE d 'de' MMMM", java.util.Locale.forLanguageTag("es-PE"));
+
     private final EntradaRepository entradas;
     private final EscaneoRepository escaneos;
     private final PuertaRepository puertas;
@@ -81,7 +85,7 @@ public class EscanerDePuerta {
     public ResultadoDeEscaneo escanear(String codigo, Usuario portero, Instant ahora) {
 
         // 1. La firma. Sin tocar la base: un código inventado muere aquí.
-        String idEntrada = firma.decodificar(codigo);
+        Long idEntrada = firma.decodificar(codigo);
         if (idEntrada == null) {
             return ResultadoDeEscaneo.rechazo(
                     MotivoDeRechazo.FALSA, "Entrada falsa: la firma no es válida.");
@@ -119,10 +123,20 @@ public class EscanerDePuerta {
         var evento = entrada.getEvento();
         Instant abre = evento.getEmpiezaA().minus(MARGEN_DE_APERTURA);
         Instant cierra = evento.getTerminaA();
-        if (ahora.isBefore(abre) || ahora.isAfter(cierra)) {
+        // Se dice cuándo abre o que ya pasó: «no es para esta noche» confunde
+        // cuando la entrada es justo de la próxima noche y la puerta aún no abre.
+        if (ahora.isBefore(abre)) {
             return ResultadoDeEscaneo.rechazo(
                     MotivoDeRechazo.OTRA_FECHA,
-                    "Esta entrada es para «%s», no para esta noche.".formatted(evento.getTitulo()),
+                    "Esta entrada es para «%s»: se puede entrar desde el %s a las %s."
+                            .formatted(evento.getTitulo(),
+                                    DIA.format(abre.atZone(LIMA)), HORA.format(abre.atZone(LIMA))),
+                    entrada);
+        }
+        if (ahora.isAfter(cierra)) {
+            return ResultadoDeEscaneo.rechazo(
+                    MotivoDeRechazo.OTRA_FECHA,
+                    "Esta entrada es para «%s», que ya terminó.".formatted(evento.getTitulo()),
                     entrada);
         }
 

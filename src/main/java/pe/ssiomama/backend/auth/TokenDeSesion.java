@@ -65,7 +65,7 @@ public class TokenDeSesion {
      *
      * @param exp momento de caducidad en segundos desde epoch (no milisegundos)
      */
-    public record Contenido(String userId, long exp) {}
+    public record Contenido(Long userId, long exp) {}
 
     private String firmar(String cuerpo) {
         try {
@@ -80,12 +80,12 @@ public class TokenDeSesion {
     }
 
     /** Emite el token de un usuario, con caducidad a una semana. */
-    public String crear(String idUsuario) {
+    public String crear(Long idUsuario) {
         return crear(idUsuario, Instant.now().plus(DURACION).getEpochSecond());
     }
 
     /** Variante con caducidad explícita: la usan los tests para no depender del reloj. */
-    public String crear(String idUsuario, long exp) {
+    public String crear(Long idUsuario, long exp) {
         try {
             byte[] payload = json.writeValueAsBytes(new Contenido(idUsuario, exp));
             String cuerpo = Base64.getUrlEncoder().withoutPadding().encodeToString(payload);
@@ -130,7 +130,7 @@ public class TokenDeSesion {
             return null;
         }
 
-        if (contenido.userId() == null || contenido.userId().isBlank()) {
+        if (contenido.userId() == null) {
             return null;
         }
         if (contenido.exp() < Instant.now().getEpochSecond()) {

@@ -53,18 +53,18 @@ class GestionDeAlmacenTest {
         return usuarios.findByEmailIgnoreCase("admin@ssiomama.test").orElseThrow();
     }
 
-    private String unaCategoria() {
+    private Long unaCategoria() {
         return categorias.findAllByOrderByNombreAsc().getFirst().getId();
     }
 
-    private String unaSala() {
+    private Long unaSala() {
         return salas.findAllByOrderByAforoDesc().getFirst().getId();
     }
 
-    private String unProducto() {
+    private Long unProducto() {
         return jdbc.queryForObject(
                 "select id from \"Producto\" where activo = true order by nombre limit 1",
-                String.class);
+                Long.class);
     }
 
     private DatosDeProducto ficha(String nombre) {
@@ -119,7 +119,7 @@ class GestionDeAlmacenTest {
     @DisplayName("editar no toca ni el sku ni el stock")
     void editarNoTocaSkuNiStock() {
         var creado = almacen.crear(ficha("Producto Editable"));
-        String id = creado.getId();
+        Long id = creado.getId();
         String sku = creado.getSku();
         comoUnaPeticionNueva();
 
@@ -144,7 +144,7 @@ class GestionDeAlmacenTest {
     @DisplayName("una categoria inventada se rechaza")
     void categoriaInventada() {
         assertThatThrownBy(() -> almacen.crear(new DatosDeProducto(
-                        "Sin Categoría", "no-existe", UnidadDeProducto.UNIDAD, 100, 200, 5, true)))
+                        "Sin Categoría", 999_999_999L, UnidadDeProducto.UNIDAD, 100, 200, 5, true)))
                 .isInstanceOf(AlmacenRechazado.class)
                 .hasMessageContaining("categoría no existe");
     }
@@ -154,7 +154,7 @@ class GestionDeAlmacenTest {
     @Test
     @DisplayName("una compra suma y actualiza el coste de referencia")
     void compra() {
-        String id = unProducto();
+        Long id = unProducto();
         int stockAntes = productos.findById(id).orElseThrow().getStock();
 
         var hecho = almacen.mover(id, movimiento(TipoDeMovimiento.COMPRA, 24, 950), direccion());
@@ -178,7 +178,7 @@ class GestionDeAlmacenTest {
     @Test
     @DisplayName("una merma resta aunque se escriba en positivo")
     void mermaEnPositivo() {
-        String id = unProducto();
+        Long id = unProducto();
         int stockAntes = productos.findById(id).orElseThrow().getStock();
 
         var hecho = almacen.mover(id, movimiento(TipoDeMovimiento.MERMA, 3, null), direccion());
@@ -191,7 +191,7 @@ class GestionDeAlmacenTest {
     @Test
     @DisplayName("un ajuste respeta el signo que se escribe")
     void ajusteConSigno() {
-        String id = unProducto();
+        Long id = unProducto();
         int stockAntes = productos.findById(id).orElseThrow().getStock();
 
         almacen.mover(id, movimiento(TipoDeMovimiento.AJUSTE, -5, null), direccion());
@@ -210,7 +210,7 @@ class GestionDeAlmacenTest {
     @Test
     @DisplayName("merma y ajuste no llevan coste")
     void sinCosteEnMermaYAjuste() {
-        String id = unProducto();
+        Long id = unProducto();
 
         var merma = almacen.mover(id, movimiento(TipoDeMovimiento.MERMA, 2, null), direccion());
         comoUnaPeticionNueva();
@@ -226,7 +226,7 @@ class GestionDeAlmacenTest {
     @Test
     @DisplayName("una compra sin coste usa el de la ficha y no lo cambia")
     void compraSinCoste() {
-        String id = unProducto();
+        Long id = unProducto();
         int costeAntes = productos.findById(id).orElseThrow().getCosteCentimos();
 
         var hecho = almacen.mover(id, movimiento(TipoDeMovimiento.COMPRA, 10, null), direccion());
@@ -244,7 +244,7 @@ class GestionDeAlmacenTest {
     @Test
     @DisplayName("el movimiento queda firmado por quien lo hizo")
     void quedaFirmado() {
-        String id = unProducto();
+        Long id = unProducto();
 
         var hecho = almacen.mover(id, movimiento(TipoDeMovimiento.COMPRA, 5, 700), direccion());
         comoUnaPeticionNueva();
@@ -301,7 +301,7 @@ class GestionDeAlmacenTest {
     @DisplayName("un producto que no existe se rechaza")
     void productoInventado() {
         assertThatThrownBy(() -> almacen.mover(
-                        "no-existe", movimiento(TipoDeMovimiento.COMPRA, 1, null), direccion()))
+                        999_999_999L, movimiento(TipoDeMovimiento.COMPRA, 1, null), direccion()))
                 .isInstanceOf(AlmacenRechazado.class)
                 .hasMessageContaining("producto no existe");
     }

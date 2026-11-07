@@ -7,6 +7,8 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
@@ -14,7 +16,6 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import pe.ssiomama.backend.auth.Usuario;
@@ -47,8 +48,9 @@ import pe.ssiomama.backend.eventos.Evento;
 public class Pedido {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    private String id;
+    private Long id;
 
     /** El que ve el cliente: {@code DSC-000123}. */
     @Column(name = "codigo", nullable = false, unique = true)
@@ -136,7 +138,6 @@ public class Pedido {
             String codigo, Cliente cliente, Evento evento, Usuario promotor, int comisionCentimos, Instant cuando) {
         Pedido p = new Pedido();
         p.promotor = promotor;
-        p.id = UUID.randomUUID().toString();
         p.codigo = codigo;
         p.cliente = cliente;
         p.evento = evento;
@@ -195,7 +196,7 @@ public class Pedido {
         return estado == EstadoDePedido.PAGADO;
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 

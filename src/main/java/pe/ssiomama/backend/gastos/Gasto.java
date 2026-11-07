@@ -4,11 +4,12 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
-import java.util.UUID;
 import pe.ssiomama.backend.auth.Usuario;
 import pe.ssiomama.backend.eventos.Evento;
 
@@ -24,8 +25,9 @@ import pe.ssiomama.backend.eventos.Evento;
 public class Gasto {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    private String id;
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "eventoId")
@@ -57,7 +59,6 @@ public class Gasto {
             CategoriaDeGasto categoria, Evento evento, int importeCentimos, String descripcion, Instant fecha,
             Usuario quien) {
         Gasto g = new Gasto();
-        g.id = UUID.randomUUID().toString();
         g.apuntadoPor = quien;
         g.cambiar(categoria, evento, importeCentimos, descripcion, fecha);
         return g;
@@ -71,7 +72,7 @@ public class Gasto {
         this.fecha = fecha;
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 

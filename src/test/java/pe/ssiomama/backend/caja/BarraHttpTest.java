@@ -48,11 +48,11 @@ class BarraHttpTest {
     private final ObjectMapper json = new ObjectMapper();
 
     /** Las ventas creadas por este test, para borrarlas al terminar. */
-    private final List<String> creadas = new java.util.ArrayList<>();
+    private final List<Long> creadas = new java.util.ArrayList<>();
 
     @AfterEach
     void limpiar() {
-        for (String ventaId : creadas) {
+        for (Long ventaId : creadas) {
             // Primero devolver el stock, leyendo lo que descontó cada movimiento.
             jdbc.update(
                     """
@@ -104,10 +104,10 @@ class BarraHttpTest {
                 "/api/barra", HttpMethod.GET, new HttpEntity<>(cabeceras), String.class);
     }
 
-    private String unProducto() {
+    private Long unProducto() {
         return jdbc.queryForObject(
                 "select id from \"Producto\" where activo = true order by nombre limit 1",
-                String.class);
+                Long.class);
     }
 
     // ── Permisos ──────────────────────────────────────────────────
@@ -216,16 +216,16 @@ class BarraHttpTest {
         assertThat(abierta.getStatusCode()).isEqualTo(HttpStatus.CREATED);
 
         JsonNode turno = json.readTree(abierta.getBody());
-        String arqueoId = turno.get("id").asText();
+        Long arqueoId = turno.get("id").asLong();
         assertThat(turno.get("esperadoCentimos").asInt()).isEqualTo(20_000);
 
-        String producto = unProducto();
+        Long producto = unProducto();
         var cobro = http.postForEntity(
                 "/api/barra/ventas",
                 new HttpEntity<>(
                         """
-                        {"arqueoId":"%s","metodoDePago":"EFECTIVO",
-                         "lineas":[{"productoId":"%s","cantidad":2}]}
+                        {"arqueoId":%s,"metodoDePago":"EFECTIVO",
+                         "lineas":[{"productoId":%s,"cantidad":2}]}
                         """
                                 .formatted(arqueoId, producto),
                         sesion),
@@ -233,7 +233,7 @@ class BarraHttpTest {
         assertThat(cobro.getStatusCode()).isEqualTo(HttpStatus.CREATED);
 
         JsonNode venta = json.readTree(cobro.getBody());
-        creadas.add(venta.get("id").asText());
+        creadas.add(venta.get("id").asLong());
 
         int total = venta.get("totalCentimos").asInt();
         assertThat(total).isPositive();
@@ -268,8 +268,8 @@ class BarraHttpTest {
                 "/api/barra/ventas",
                 new HttpEntity<>(
                         """
-                        {"arqueoId":"no-existe","metodoDePago":"EFECTIVO",
-                         "lineas":[{"productoId":"%s","cantidad":1}]}
+                        {"arqueoId":999999999,"metodoDePago":"EFECTIVO",
+                         "lineas":[{"productoId":%d,"cantidad":1}]}
                         """
                                 .formatted(unProducto()),
                         sesion),
@@ -285,7 +285,7 @@ class BarraHttpTest {
         var r = http.postForEntity(
                 "/api/barra/ventas",
                 new HttpEntity<>(
-                        "{\"arqueoId\":\"x\",\"metodoDePago\":\"EFECTIVO\",\"lineas\":[]}",
+                        "{\"arqueoId\":999999999,\"metodoDePago\":\"EFECTIVO\",\"lineas\":[]}",
                         sesionDe("barra@ssiomama.test")),
                 String.class);
 

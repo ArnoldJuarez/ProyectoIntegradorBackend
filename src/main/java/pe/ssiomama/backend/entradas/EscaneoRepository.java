@@ -7,10 +7,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 /** Acceso a {@code "Acceso"}: quién ha entrado ya y por dónde. */
-public interface EscaneoRepository extends JpaRepository<Escaneo, String> {
+public interface EscaneoRepository extends JpaRepository<Escaneo, Long> {
 
     /** Cuánta gente lleva dentro una noche. Es el aforo en vivo. */
-    long countByEventoId(String eventoId);
+    long countByEventoId(Long eventoId);
 
     /**
      * Los últimos que han pasado, con el portero y la entrada ya cargados.
@@ -28,7 +28,7 @@ public interface EscaneoRepository extends JpaRepository<Escaneo, String> {
             where e.evento.id = :eventoId
             order by e.escaneadoEn desc
             """)
-    List<Escaneo> buscarUltimosDe(@Param("eventoId") String eventoId, Pageable pagina);
+    List<Escaneo> buscarUltimosDe(@Param("eventoId") Long eventoId, Pageable pagina);
 
     /**
      * Cuántos han entrado por cada puerta.
@@ -50,7 +50,7 @@ public interface EscaneoRepository extends JpaRepository<Escaneo, String> {
             group by p.nombre, p.caudalPorMinuto
             order by count(e) desc
             """)
-    List<Object[]> contarPorPuerta(@Param("eventoId") String eventoId);
+    List<Object[]> contarPorPuerta(@Param("eventoId") Long eventoId);
 
     /**
      * A qué hora fue entrando la gente.
@@ -69,5 +69,5 @@ public interface EscaneoRepository extends JpaRepository<Escaneo, String> {
             where e.evento.id = :eventoId
             order by e.escaneadoEn asc
             """)
-    List<java.time.Instant> horasDeEntrada(@Param("eventoId") String eventoId);
+    List<java.time.Instant> horasDeEntrada(@Param("eventoId") Long eventoId);
 }

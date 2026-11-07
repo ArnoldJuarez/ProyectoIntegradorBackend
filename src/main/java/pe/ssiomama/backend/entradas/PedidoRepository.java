@@ -10,7 +10,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface PedidoRepository extends JpaRepository<Pedido, String> {
+public interface PedidoRepository extends JpaRepository<Pedido, Long> {
 
     /**
      * Los pedidos recientes, con su cliente y su noche ya cargados.
@@ -95,5 +95,5 @@ public interface PedidoRepository extends JpaRepository<Pedido, String> {
             from Pedido p
             where p.evento.id = :eventoId and p.estado = :pagado
             """)
-    long taquillaDe(@Param("eventoId") String eventoId, @Param("pagado") EstadoDePedido pagado);
+    long taquillaDe(@Param("eventoId") Long eventoId, @Param("pagado") EstadoDePedido pagado);
 }

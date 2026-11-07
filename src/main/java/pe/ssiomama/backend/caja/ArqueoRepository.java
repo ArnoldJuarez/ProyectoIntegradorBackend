@@ -9,7 +9,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface ArqueoRepository extends JpaRepository<ArqueoDeCaja, String> {
+public interface ArqueoRepository extends JpaRepository<ArqueoDeCaja, Long> {
 
     /**
      * Los arqueos, del más reciente al más antiguo.
@@ -38,7 +38,7 @@ public interface ArqueoRepository extends JpaRepository<ArqueoDeCaja, String> {
             left join fetch a.barra
             where a.id = :id
             """)
-    Optional<ArqueoDeCaja> buscarPorIdConDetalle(@Param("id") String id);
+    Optional<ArqueoDeCaja> buscarPorIdConDetalle(@Param("id") Long id);
 
     /**
      * El turno abierto de una persona, si lo tiene.
@@ -57,7 +57,7 @@ public interface ArqueoRepository extends JpaRepository<ArqueoDeCaja, String> {
             order by a.abiertaEn desc
             limit 1
             """)
-    Optional<ArqueoDeCaja> buscarAbiertoDe(@Param("usuarioId") String usuarioId);
+    Optional<ArqueoDeCaja> buscarAbiertoDe(@Param("usuarioId") Long usuarioId);
 
     /**
      * El turno que se va a modificar, <b>bloqueado</b>.
@@ -73,7 +73,7 @@ public interface ArqueoRepository extends JpaRepository<ArqueoDeCaja, String> {
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select a from ArqueoDeCaja a where a.id = :id")
-    Optional<ArqueoDeCaja> bloquear(@Param("id") String id);
+    Optional<ArqueoDeCaja> bloquear(@Param("id") Long id);
 
     /**
      * Cuántas cajas siguen abiertas.

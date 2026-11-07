@@ -9,7 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 /** Acceso a {@code "TipoEntrada"}. */
-public interface TipoDeEntradaRepository extends JpaRepository<TipoDeEntrada, String> {
+public interface TipoDeEntradaRepository extends JpaRepository<TipoDeEntrada, Long> {
 
     /**
      * Los tipos pedidos, <b>bloqueados</b> para vender.
@@ -55,7 +55,7 @@ public interface TipoDeEntradaRepository extends JpaRepository<TipoDeEntrada, St
             order by t.id
             """)
     List<TipoDeEntrada> bloquearParaVender(
-            @Param("eventoId") String eventoId, @Param("ids") List<String> ids);
+            @Param("eventoId") Long eventoId, @Param("ids") List<Long> ids);
 
     /** Los mismos sin bloquear, para consultar sin intención de vender. */
     @Query("""
@@ -63,13 +63,13 @@ public interface TipoDeEntradaRepository extends JpaRepository<TipoDeEntrada, St
             where t.evento.id = :eventoId and t.id in :ids
             """)
     List<TipoDeEntrada> buscarDelEvento(
-            @Param("eventoId") String eventoId, @Param("ids") List<String> ids);
+            @Param("eventoId") Long eventoId, @Param("ids") List<Long> ids);
 
     /** Un tipo con su evento ya cargado. */
     @Query("select t from TipoDeEntrada t join fetch t.evento where t.id = :id")
-    Optional<TipoDeEntrada> buscarConEvento(@Param("id") String id);
+    Optional<TipoDeEntrada> buscarConEvento(@Param("id") Long id);
 
     /** Todos los tipos de una noche, como entidades: para borrarlos con ella. */
     @Query("select t from TipoDeEntrada t where t.evento.id = :eventoId")
-    List<TipoDeEntrada> buscarDeLaNoche(@Param("eventoId") String eventoId);
+    List<TipoDeEntrada> buscarDeLaNoche(@Param("eventoId") Long eventoId);
 }

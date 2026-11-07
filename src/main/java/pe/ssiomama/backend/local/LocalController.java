@@ -65,7 +65,7 @@ public class LocalController {
     // ── Lo que sale ───────────────────────────────────────────────
 
     public record ZonaDelPlano(
-            String id,
+            Long id,
             String nombre,
             TipoDeZona tipo,
             int aforo,
@@ -85,7 +85,7 @@ public class LocalController {
     }
 
     public record PuertaDelPlano(
-            String id,
+            Long id,
             String nombre,
             boolean esSalidaEmergencia,
             int caudalPorMinuto,
@@ -103,7 +103,7 @@ public class LocalController {
     }
 
     public record SalaDelPlano(
-            String id,
+            Long id,
             String nombre,
             int aforo,
             double planoAncho,
@@ -112,7 +112,7 @@ public class LocalController {
             List<PuertaDelPlano> puertas,
             List<ElementoDelPlano> elementos) {}
 
-    public record ElementoDelPlano(String id, TipoDeElemento tipo, String nombre, int piso, double x, double y) {
+    public record ElementoDelPlano(Long id, TipoDeElemento tipo, String nombre, int piso, double x, double y) {
 
         static ElementoDelPlano de(ElementoDeSeguridad e) {
             return new ElementoDelPlano(e.getId(), e.getTipo(), e.getNombre(), e.getPiso(), e.getX(), e.getY());
@@ -126,7 +126,7 @@ public class LocalController {
     // inservible.
 
     public record ZonaDibujada(
-            @NotBlank String id,
+            @NotNull Long id,
             @NotNull(message = "Falta el tipo de una zona") TipoDeZona tipo,
             @DecimalMin("0") @DecimalMax("500") double x,
             @DecimalMin("0") @DecimalMax("500") double y,
@@ -138,7 +138,7 @@ public class LocalController {
             @Min(-2) @Max(5) Integer piso) {}
 
     public record PuertaDibujada(
-            @NotBlank String id,
+            @NotNull Long id,
             @DecimalMin("0") @DecimalMax("500") double x,
             @DecimalMin("0") @DecimalMax("500") double y,
             @DecimalMin(value = "0.1", message = "Una puerta mide al menos 10 cm")
@@ -149,7 +149,7 @@ public class LocalController {
             @Min(-2) @Max(5) Integer piso) {}
 
     public record GeometriaDeSala(
-            @NotBlank(message = "Falta la sala") String salaId,
+            @NotNull(message = "Falta la sala") Long salaId,
             @DecimalMin("0") @DecimalMax("500") double planoAncho,
             @DecimalMin("0") @DecimalMax("500") double planoFondo,
             @NotNull @Size(max = 60) List<@Valid ZonaDibujada> zonas,
@@ -164,7 +164,7 @@ public class LocalController {
      *     vengan se borran: el editor manda la lista entera.
      */
     public record ElementoDibujado(
-            String id,
+            Long id,
             @NotNull(message = "Falta el tipo de un elemento de seguridad") TipoDeElemento tipo,
             @Size(max = 80) String nombre,
             @Min(-2) @Max(5) int piso,
@@ -208,9 +208,9 @@ public class LocalController {
 
         // Las zonas y puertas tienen que ser de ESTA sala. Sin comprobarlo, un
         // id ajeno en la petición movería la zona de otro local.
-        Map<String, Zona> suyasZ = zonas.findBySalaIdOrderByOrdenAsc(sala.getId()).stream()
+        Map<Long, Zona> suyasZ = zonas.findBySalaIdOrderByOrdenAsc(sala.getId()).stream()
                 .collect(Collectors.toMap(Zona::getId, Function.identity()));
-        Map<String, Puerta> suyasP = puertas.findBySalaIdOrderByNombreAsc(sala.getId()).stream()
+        Map<Long, Puerta> suyasP = puertas.findBySalaIdOrderByNombreAsc(sala.getId()).stream()
                 .collect(Collectors.toMap(Puerta::getId, Function.identity()));
 
         if (geometria.zonas().stream().anyMatch(z -> !suyasZ.containsKey(z.id()))
@@ -237,10 +237,10 @@ public class LocalController {
     }
 
     /** La lista entera: los que vienen con id se recolocan, los nuevos se crean y los que faltan se quitan. */
-    private void guardarElementos(String salaId, List<ElementoDibujado> lista) {
-        Map<String, ElementoDeSeguridad> suyos = elementos.findBySalaIdOrderByTipoAscNombreAsc(salaId).stream()
+    private void guardarElementos(Long salaId, List<ElementoDibujado> lista) {
+        Map<Long, ElementoDeSeguridad> suyos = elementos.findBySalaIdOrderByTipoAscNombreAsc(salaId).stream()
                 .collect(Collectors.toMap(ElementoDeSeguridad::getId, Function.identity()));
-        Set<String> vistos = new HashSet<>();
+        Set<Long> vistos = new HashSet<>();
         for (ElementoDibujado d : lista) {
             ElementoDeSeguridad e = d.id() != null && suyos.containsKey(d.id())
                     ? suyos.get(d.id())

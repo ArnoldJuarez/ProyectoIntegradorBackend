@@ -11,7 +11,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -75,7 +74,7 @@ public class AplicadorDePropuestas {
     }
 
     @Transactional
-    public Resultado aplicar(TipoDePropuesta tipo, JsonNode datos, String ejecucionId) {
+    public Resultado aplicar(TipoDePropuesta tipo, JsonNode datos, Long ejecucionId) {
         return switch (tipo) {
             case TEXTO_CAMPANIA -> textosDeCampania(datos, ejecucionId);
             case CAMPANIA -> campania(datos, ejecucionId);
@@ -88,7 +87,7 @@ public class AplicadorDePropuestas {
 
     // ── Textos de promoción → campaña en borrador ─────────────────
 
-    private Resultado textosDeCampania(JsonNode datos, String ejecucionId) {
+    private Resultado textosDeCampania(JsonNode datos, Long ejecucionId) {
         String asunto = datos.path("correo").path("asunto").asText("");
         String cuerpo = datos.path("correo").path("cuerpo").asText("");
         if (asunto.isBlank() || cuerpo.isBlank()) {
@@ -107,7 +106,7 @@ public class AplicadorDePropuestas {
 
     // ── Campaña del segmentador ───────────────────────────────────
 
-    private Resultado campania(JsonNode datos, String ejecucionId) {
+    private Resultado campania(JsonNode datos, Long ejecucionId) {
         JsonNode c = datos.path("campaign");
         String nombre = c.path("nombre").asText("");
         String cuerpo = c.path("cuerpo").asText("");
@@ -123,7 +122,7 @@ public class AplicadorDePropuestas {
         }
 
         String pedido = c.path("segmento").asText("");
-        String segmentoId = segmentoPorNombre(pedido).orElseGet(() -> {
+        Long segmentoId = segmentoPorNombre(pedido).orElseGet(() -> {
             if (!pedido.isBlank()) {
                 avisos.add("No existe el segmento «" + pedido + "»; la campaña apunta a «" + SEGMENTO_GENERAL + "».");
             }
@@ -137,13 +136,12 @@ public class AplicadorDePropuestas {
     }
 
     private void crearCampania(
-            String nombre, String canal, String segmentoId, String asunto, String cuerpo, String ejecucionId) {
+            String nombre, String canal, Long segmentoId, String asunto, String cuerpo, Long ejecucionId) {
         sql.sql("""
-                insert into "Campania" (id, nombre, canal, "segmentoId", asunto, cuerpo, estado, "ejecucionId", "creadoEn")
-                values (:id, :nombre, cast(:canal as "CanalCampania"), :segmento, :asunto, :cuerpo,
+                insert into "Campania" (nombre, canal, "segmentoId", asunto, cuerpo, estado, "ejecucionId", "creadoEn")
+                values (:nombre, cast(:canal as "CanalCampania"), :segmento, :asunto, :cuerpo,
                         'BORRADOR', :ejecucion, %s)
                 """.formatted(AHORA))
-                .param("id", UUID.randomUUID().toString())
                 .param("nombre", nombre)
                 .param("canal", canal)
                 .param("segmento", segmentoId)
@@ -153,28 +151,25 @@ public class AplicadorDePropuestas {
                 .update();
     }
 
-    private Optional<String> segmentoPorNombre(String nombre) {
+    private Optional<Long> segmentoPorNombre(String nombre) {
         if (nombre == null || nombre.isBlank()) return Optional.empty();
         return sql.sql("select id from \"Segmento\" where nombre = :nombre")
                 .param("nombre", nombre)
-                .query(String.class)
+                .query(Long.class)
                 .optional();
     }
 
     /** El segmento general, creándolo la primera vez que hace falta. */
-    private String segmentoGeneral() {
-        return segmentoPorNombre(SEGMENTO_GENERAL).orElseGet(() -> {
-            String id = UUID.randomUUID().toString();
-            sql.sql("""
-                    insert into "Segmento" (id, nombre, descripcion, "reglasJson", "esDinamico", "actualizadoEn")
-                    values (:id, :nombre, 'Clientes que aceptaron recibir comunicaciones.',
+    private Long segmentoGeneral() {
+        return segmentoPorNombre(SEGMENTO_GENERAL).orElseGet(() -> sql.sql("""
+                    insert into "Segmento" (nombre, descripcion, "reglasJson", "esDinamico", "actualizadoEn")
+                    values (:nombre, 'Clientes que aceptaron recibir comunicaciones.',
                             '{"type": "consented"}'::jsonb, true, %s)
+                    returning id
                     """.formatted(AHORA))
-                    .param("id", id)
                     .param("nombre", SEGMENTO_GENERAL)
-                    .update();
-            return id;
-        });
+                    .query(Long.class)
+                    .single());
     }
 
     // ── Pedido a proveedor ────────────────────────────────────────
@@ -191,22 +186,22 @@ public class AplicadorDePropuestas {
             return new Resultado(false, "La propuesta no pedía reponer nada.", List.of());
         }
 
-        record Proveedor(String id, String nombre) {}
+        record Proveedor(Long id, String nombre) {}
         Optional<Proveedor> proveedor = sql.sql("select id, nombre from \"Proveedor\" order by nombre limit 1")
-                .query((rs, n) -> new Proveedor(rs.getString(1), rs.getString(2)))
+                .query((rs, n) -> new Proveedor(rs.getLong(1), rs.getString(2)))
                 .optional();
         if (proveedor.isEmpty()) {
             return new Resultado(false,
                     "No hay ningún proveedor dado de alta, así que no se puede crear el pedido.", List.of());
         }
 
-        record Linea(String productoId, int cantidad, int coste) {}
+        record Linea(Long productoId, int cantidad, int coste) {}
         List<String> avisos = new ArrayList<>();
         List<Linea> lineas = new ArrayList<>();
         for (Pedible p : pedibles) {
             Optional<Linea> linea = sql.sql("select id, \"costeCentimos\" from \"Producto\" where sku = :sku")
                     .param("sku", p.sku())
-                    .query((rs, n) -> new Linea(rs.getString(1), p.cantidad(), rs.getInt(2)))
+                    .query((rs, n) -> new Linea(rs.getLong(1), p.cantidad(), rs.getInt(2)))
                     .optional();
             if (linea.isEmpty()) {
                 avisos.add("No existe ningún producto con la referencia " + p.sku() + "; línea omitida.");
@@ -219,21 +214,20 @@ public class AplicadorDePropuestas {
         }
 
         long total = lineas.stream().mapToLong(l -> (long) l.cantidad() * l.coste()).sum();
-        String ordenId = UUID.randomUUID().toString();
-        sql.sql("""
-                insert into "OrdenCompra" (id, "proveedorId", estado, "totalCentimos", "creadoEn")
-                values (:id, :proveedor, 'BORRADOR', :total, %s)
+        Long ordenId = sql.sql("""
+                insert into "OrdenCompra" ("proveedorId", estado, "totalCentimos", "creadoEn")
+                values (:proveedor, 'BORRADOR', :total, %s)
+                returning id
                 """.formatted(AHORA))
-                .param("id", ordenId)
                 .param("proveedor", proveedor.get().id())
                 .param("total", total)
-                .update();
+                .query(Long.class)
+                .single();
         for (Linea l : lineas) {
             sql.sql("""
-                    insert into "LineaOrdenCompra" (id, "ordenCompraId", "productoId", cantidad, "costeUnitarioCentimos")
-                    values (:id, :orden, :producto, :cantidad, :coste)
+                    insert into "LineaOrdenCompra" ("ordenCompraId", "productoId", cantidad, "costeUnitarioCentimos")
+                    values (:orden, :producto, :cantidad, :coste)
                     """)
-                    .param("id", UUID.randomUUID().toString())
                     .param("orden", ordenId)
                     .param("producto", l.productoId())
                     .param("cantidad", l.cantidad())
@@ -264,7 +258,7 @@ public class AplicadorDePropuestas {
 
             // Solo noches futuras y publicadas: cambiar el precio de una ya
             // celebrada falsearía su contabilidad.
-            record Candidato(String id, String nombre, int vendidas, String noche) {}
+            record Candidato(Long id, String nombre, int vendidas, String noche) {}
             List<Candidato> candidatos = sql.sql("""
                     select t.id, t.nombre, t.vendidas, e.titulo
                     from "TipoEntrada" t join "Evento" e on e.id = t."eventoId"
@@ -273,7 +267,7 @@ public class AplicadorDePropuestas {
                     """.formatted(AHORA))
                     .param("tipo", tipo)
                     .param("evento", evento)
-                    .query((rs, n) -> new Candidato(rs.getString(1), rs.getString(2), rs.getInt(3), rs.getString(4)))
+                    .query((rs, n) -> new Candidato(rs.getLong(1), rs.getString(2), rs.getInt(3), rs.getString(4)))
                     .list();
 
             if (candidatos.isEmpty()) {
@@ -371,11 +365,11 @@ public class AplicadorDePropuestas {
                 continue;
             }
 
-            List<String> cartel = new ArrayList<>();
+            List<Long> cartel = new ArrayList<>();
             for (JsonNode nombre : n.path("artistas")) {
                 String pedido = nombre.asText("").trim();
                 if (pedido.isEmpty()) continue;
-                Optional<String> id = artistas.findFirstByNombreIgnoreCase(pedido).map(Artista::getId);
+                Optional<Long> id = artistas.findFirstByNombreIgnoreCase(pedido).map(Artista::getId);
                 if (id.isEmpty()) {
                     avisos.add("«" + pedido + "» no está en el catálogo de artistas: dalo de alta y añádelo al "
                             + "cartel de «" + titulo + "» si lo quieres.");

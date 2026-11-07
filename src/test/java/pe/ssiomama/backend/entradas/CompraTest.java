@@ -91,14 +91,14 @@ class CompraTest {
     // ── Apoyo ─────────────────────────────────────────────────────
 
     /** El id de un tipo de entrada de esa noche, por su nombre. */
-    private String idDeTipo(String slug, String nombre) {
+    private Long idDeTipo(String slug, String nombre) {
         return jdbc.queryForObject(
                 """
                 select t.id from "TipoEntrada" t
                 join "Evento" v on v.id = t."eventoId"
                 where v.slug = ? and t.nombre = ?
                 """,
-                String.class,
+                Long.class,
                 slug,
                 nombre);
     }
@@ -135,7 +135,7 @@ class CompraTest {
     @Test
     @DisplayName("abrir un pedido aparta el cupo, antes de cobrar nada")
     void abrirApartaElCupo() {
-        String general = idDeTipo(NOCHE, "General");
+        Long general = idDeTipo(NOCHE, "General");
         int vendidasAntes = tipos.findById(general).orElseThrow().getVendidas();
 
         var abierto = compra.abrir(
@@ -160,7 +160,7 @@ class CompraTest {
     @Test
     @DisplayName("el precio y la comision los calcula el servidor")
     void elPrecioLoPoneElServidor() {
-        String vip = idDeTipo(NOCHE, "VIP");
+        Long vip = idDeTipo(NOCHE, "VIP");
         int precio = tipos.findById(vip).orElseThrow().getPrecioCentimos();
 
         var abierto = compra.abrir(
@@ -178,8 +178,8 @@ class CompraTest {
     @Test
     @DisplayName("varios tipos en un mismo pedido suman bien")
     void variosTipos() {
-        String general = idDeTipo(NOCHE, "General");
-        String vip = idDeTipo(NOCHE, "VIP");
+        Long general = idDeTipo(NOCHE, "General");
+        Long vip = idDeTipo(NOCHE, "VIP");
         int pGeneral = tipos.findById(general).orElseThrow().getPrecioCentimos();
         int pVip = tipos.findById(vip).orElseThrow().getPrecioCentimos();
 
@@ -198,7 +198,7 @@ class CompraTest {
     @Test
     @DisplayName("no se venden mas entradas de las que quedan")
     void noSeVendeDeMas() {
-        String vip = idDeTipo(NOCHE, "VIP");
+        Long vip = idDeTipo(NOCHE, "VIP");
         // Se deja el tipo con dos disponibles. Por SQL porque el panel es quien
         // ajusta aforos, y esta entidad no expone ese cambio.
         jdbc.update("update \"TipoEntrada\" set cantidad = vendidas + 2 where id = ?", vip);
@@ -215,7 +215,7 @@ class CompraTest {
     @Test
     @DisplayName("agotado se dice agotado, no «quedan 0»")
     void agotado() {
-        String vip = idDeTipo(NOCHE, "VIP");
+        Long vip = idDeTipo(NOCHE, "VIP");
         jdbc.update("update \"TipoEntrada\" set cantidad = vendidas where id = ?", vip);
         comoUnaPeticionNueva();
 
@@ -228,7 +228,7 @@ class CompraTest {
     @Test
     @DisplayName("se respeta el maximo por pedido")
     void maximoPorPedido() {
-        String general = idDeTipo(NOCHE, "General");
+        Long general = idDeTipo(NOCHE, "General");
         int maximo = tipos.findById(general).orElseThrow().getMaximoPorPedido();
 
         assertThatThrownBy(() -> compra.abrir(
@@ -243,7 +243,7 @@ class CompraTest {
     @Test
     @DisplayName("una noche que no esta a la venta no vende")
     void nocheCerrada() {
-        String general = idDeTipo(NOCHE_CERRADA, "General");
+        Long general = idDeTipo(NOCHE_CERRADA, "General");
 
         assertThatThrownBy(() -> compra.abrir(
                         NOCHE_CERRADA, alguienNuevo(), List.of(new Peticion(general, 1)),
@@ -260,7 +260,7 @@ class CompraTest {
     @Test
     @DisplayName("un tipo de entrada de otro evento no cuela")
     void tipoDeOtroEvento() {
-        String deLaOtraNoche = idDeTipo(OTRA_NOCHE, "General");
+        Long deLaOtraNoche = idDeTipo(OTRA_NOCHE, "General");
 
         assertThatThrownBy(() -> compra.abrir(
                         NOCHE, alguienNuevo(), List.of(new Peticion(deLaOtraNoche, 1)),
@@ -280,8 +280,8 @@ class CompraTest {
     @Test
     @DisplayName("si una linea falla, ninguna aparta cupo")
     void falloParcialNoApartaNada() {
-        String general = idDeTipo(NOCHE, "General");
-        String vip = idDeTipo(NOCHE, "VIP");
+        Long general = idDeTipo(NOCHE, "General");
+        Long vip = idDeTipo(NOCHE, "VIP");
         jdbc.update("update \"TipoEntrada\" set cantidad = vendidas where id = ?", vip);
         comoUnaPeticionNueva();
 
@@ -304,7 +304,7 @@ class CompraTest {
     @Test
     @DisplayName("quien vuelve a comprar no se duplica como cliente")
     void elClienteNoSeDuplica() {
-        String general = idDeTipo(NOCHE, "General");
+        Long general = idDeTipo(NOCHE, "General");
         Comprador ana = alguienNuevo();
 
         compra.abrir(NOCHE, ana, List.of(new Peticion(general, 1)), mientrasSeVende(NOCHE));
@@ -330,7 +330,7 @@ class CompraTest {
     @Test
     @DisplayName("pagar emite las entradas y sus QR son validos")
     void pagarEmiteEntradasValidas() {
-        String general = idDeTipo(NOCHE, "General");
+        Long general = idDeTipo(NOCHE, "General");
         var abierto = compra.abrir(
                 NOCHE, alguienNuevo(), List.of(new Peticion(general, 2)), mientrasSeVende(NOCHE));
         comoUnaPeticionNueva();
@@ -360,7 +360,7 @@ class CompraTest {
     @Test
     @DisplayName("pagar dos veces no emite el doble")
     void pagarDosVeces() {
-        String general = idDeTipo(NOCHE, "General");
+        Long general = idDeTipo(NOCHE, "General");
         var abierto = compra.abrir(
                 NOCHE, alguienNuevo(), List.of(new Peticion(general, 2)), mientrasSeVende(NOCHE));
         comoUnaPeticionNueva();
@@ -378,7 +378,7 @@ class CompraTest {
     @Test
     @DisplayName("pagar actualiza la ficha del cliente y le abona sus puntos")
     void pagarActualizaAlCliente() {
-        String general = idDeTipo(NOCHE, "General");
+        Long general = idDeTipo(NOCHE, "General");
         Comprador ana = alguienNuevo();
 
         var abierto = compra.abrir(NOCHE, ana, List.of(new Peticion(general, 2)), mientrasSeVende(NOCHE));
@@ -424,7 +424,7 @@ class CompraTest {
     @Test
     @DisplayName("la compra desde el enlace de un promotor le cuenta a él, escriba como escriba el código")
     void elCodigoDelEnlaceQuedaEnElPedido() {
-        String general = idDeTipo(NOCHE, "General");
+        Long general = idDeTipo(NOCHE, "General");
 
         var abierto = compra.abrir(
                 NOCHE, alguienNuevo(), List.of(new Peticion(general, 2)), " piero ", mientrasSeVende(NOCHE));
@@ -436,7 +436,7 @@ class CompraTest {
     @Test
     @DisplayName("un código de promotor que no existe no impide comprar: queda como venta directa")
     void unCodigoQueNoExisteNoBloqueaLaCompra() {
-        String general = idDeTipo(NOCHE, "General");
+        Long general = idDeTipo(NOCHE, "General");
 
         var abierto = compra.abrir(
                 NOCHE, alguienNuevo(), List.of(new Peticion(general, 1)), "NOEXISTE", mientrasSeVende(NOCHE));

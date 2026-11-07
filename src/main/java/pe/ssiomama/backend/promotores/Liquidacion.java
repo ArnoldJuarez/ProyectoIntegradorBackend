@@ -6,11 +6,12 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
-import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import pe.ssiomama.backend.auth.Usuario;
@@ -36,8 +37,9 @@ import pe.ssiomama.backend.caja.MetodoDePago;
 public class Liquidacion {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    private String id;
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "promotorId", nullable = false)
@@ -110,7 +112,6 @@ public class Liquidacion {
             Usuario promotor, Instant hasta, MetodoDePago metodo, String referencia, String nota,
             int ajusteCentimos, Usuario quien, Instant ahora) {
         Liquidacion l = new Liquidacion();
-        l.id = UUID.randomUUID().toString();
         l.promotor = promotor;
         l.hasta = hasta;
         l.metodoDePago = metodo;
@@ -144,7 +145,7 @@ public class Liquidacion {
         return s == null || s.isBlank() ? null : s.trim();
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 

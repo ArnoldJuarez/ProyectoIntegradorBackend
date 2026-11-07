@@ -68,7 +68,7 @@ class CompraConcurrenteTest {
     @Autowired
     private JdbcTemplate jdbc;
 
-    private String tipoId;
+    private Long tipoId;
 
     /**
      * Un instante en el que esa noche todavía se vende.
@@ -90,7 +90,7 @@ class CompraConcurrenteTest {
                 join "Evento" v on v.id = t."eventoId"
                 where v.slug = ? and t.nombre = ?
                 """,
-                String.class,
+                Long.class,
                 NOCHE,
                 TIPO);
 

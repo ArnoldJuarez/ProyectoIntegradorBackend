@@ -43,9 +43,9 @@ public class GestionDeCompras {
 
     // ── Lo que llega del formulario ───────────────────────────────
 
-    public record LineaDeFormulario(String productoId, int cantidad, int costeUnitarioCentimos) {}
+    public record LineaDeFormulario(Long productoId, int cantidad, int costeUnitarioCentimos) {}
 
-    public record DatosDeOrden(String proveedorId, Instant esperadoEn, List<LineaDeFormulario> lineas) {}
+    public record DatosDeOrden(Long proveedorId, Instant esperadoEn, List<LineaDeFormulario> lineas) {}
 
     public record DatosDeProveedor(String nombre, String personaDeContacto, String email, String telefono) {}
 
@@ -61,7 +61,7 @@ public class GestionDeCompras {
 
     /** Solo un borrador se edita: uno enviado es lo que el proveedor ya tiene en la mano. */
     @Transactional
-    public OrdenDeCompra editar(String id, DatosDeOrden datos) {
+    public OrdenDeCompra editar(Long id, DatosDeOrden datos) {
         OrdenDeCompra orden = orden(id);
         if (orden.getEstado() != EstadoDeOrden.BORRADOR) {
             throw new AlmacenRechazado("Solo se edita un pedido en borrador. Este ya está "
@@ -72,7 +72,7 @@ public class GestionDeCompras {
     }
 
     @Transactional
-    public OrdenDeCompra enviar(String id) {
+    public OrdenDeCompra enviar(Long id) {
         OrdenDeCompra orden = orden(id);
         if (orden.getEstado() != EstadoDeOrden.BORRADOR) {
             throw new AlmacenRechazado("Solo se envía un pedido en borrador.");
@@ -92,7 +92,7 @@ public class GestionDeCompras {
      * uno ya recibido, que metería la mercancía dos veces.
      */
     @Transactional
-    public OrdenDeCompra recibir(String id, String salaId, Usuario quien) {
+    public OrdenDeCompra recibir(Long id, Long salaId, Usuario quien) {
         OrdenDeCompra orden = orden(id);
         if (orden.getEstado() == EstadoDeOrden.RECIBIDO) {
             throw new AlmacenRechazado("Este pedido ya se recibió: su mercancía ya está en el almacén.");
@@ -117,7 +117,7 @@ public class GestionDeCompras {
     }
 
     @Transactional
-    public OrdenDeCompra cancelar(String id) {
+    public OrdenDeCompra cancelar(Long id) {
         OrdenDeCompra orden = orden(id);
         if (orden.getEstado() == EstadoDeOrden.RECIBIDO) {
             throw new AlmacenRechazado("Un pedido recibido ya no se cancela: su mercancía está en el almacén. "
@@ -140,7 +140,7 @@ public class GestionDeCompras {
     }
 
     @Transactional
-    public Proveedor editarProveedor(String id, DatosDeProveedor datos) {
+    public Proveedor editarProveedor(Long id, DatosDeProveedor datos) {
         Proveedor proveedor = proveedor(id);
         comprobarNombreLibre(datos.nombre(), id);
         proveedor.actualizar(datos.nombre(), datos.personaDeContacto(), datos.email(), datos.telefono());
@@ -149,18 +149,18 @@ public class GestionDeCompras {
 
     // ── Apoyo ─────────────────────────────────────────────────────
 
-    private OrdenDeCompra orden(String id) {
+    private OrdenDeCompra orden(Long id) {
         return ordenes.buscarConLineas(id).orElseThrow(() -> new AlmacenRechazado("Ese pedido no existe."));
     }
 
-    private Proveedor proveedor(String id) {
-        return proveedores.findById(id == null ? "" : id)
+    private Proveedor proveedor(Long id) {
+        return (id == null ? java.util.Optional.<Proveedor>empty() : proveedores.findById(id))
                 .orElseThrow(() -> new AlmacenRechazado("Ese proveedor no existe."));
     }
 
     private List<OrdenDeCompra.LineaPedida> lineas(List<LineaDeFormulario> pedidas) {
         List<OrdenDeCompra.LineaPedida> lineas = new ArrayList<>();
-        List<String> vistos = new ArrayList<>();
+        List<Long> vistos = new ArrayList<>();
         for (LineaDeFormulario l : pedidas == null ? List.<LineaDeFormulario>of() : pedidas) {
             if (l.cantidad() < 1) throw new AlmacenRechazado("Cada línea pide al menos una unidad.");
             if (l.costeUnitarioCentimos() < 0) throw new AlmacenRechazado("El coste no puede ser negativo.");
@@ -176,7 +176,7 @@ public class GestionDeCompras {
         return lineas;
     }
 
-    private void comprobarNombreLibre(String nombre, String exceptoId) {
+    private void comprobarNombreLibre(String nombre, Long exceptoId) {
         proveedores.findAllByOrderByNombreAsc().stream()
                 .filter(p -> p.getNombre().equalsIgnoreCase(nombre.trim()))
                 .filter(p -> !p.getId().equals(exceptoId))

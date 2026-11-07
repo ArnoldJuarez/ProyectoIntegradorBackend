@@ -1,6 +1,7 @@
 package pe.ssiomama.backend.promotores;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -46,7 +47,7 @@ public class ListasController {
 
     public record FormularioDeLista(
             @NotBlank(message = "Elige la noche") String slug,
-            @NotBlank(message = "Elige el promotor") String promotorId,
+            @NotNull(message = "Elige el promotor") Long promotorId,
             @NotBlank(message = "Ponle un nombre a la lista")
             @Size(min = 2, max = 80, message = "El nombre tiene entre 2 y 80 caracteres")
             String nombre,
@@ -65,7 +66,7 @@ public class ListasController {
 
     public record Entrada(boolean entro) {}
 
-    public record InvitadoEnFicha(String id, String nombreCompleto, int personas, boolean entro, Instant entroEn) {
+    public record InvitadoEnFicha(Long id, String nombreCompleto, int personas, boolean entro, Instant entroEn) {
 
         static InvitadoEnFicha de(Invitado i) {
             return new InvitadoEnFicha(i.getId(), i.getNombreCompleto(), i.getPersonas(), i.isEntro(), i.getEntroEn());
@@ -73,12 +74,12 @@ public class ListasController {
     }
 
     public record FichaDeLista(
-            String id,
+            Long id,
             String nombre,
             String noche,
             String nocheSlug,
             Instant empiezaA,
-            String promotorId,
+            Long promotorId,
             String promotor,
             int maxInvitados,
             int apuntados,
@@ -98,7 +99,7 @@ public class ListasController {
 
     public record NocheParaLista(String slug, String titulo, Instant empiezaA) {}
 
-    public record PromotorParaLista(String id, String nombre, String codigo) {}
+    public record PromotorParaLista(Long id, String nombre, String codigo) {}
 
     public record OpcionesDeLista(List<NocheParaLista> noches, List<PromotorParaLista> promotores) {}
 
@@ -122,7 +123,7 @@ public class ListasController {
 
     @GetMapping("/listas/{id}")
     @Transactional(readOnly = true)
-    public ResponseEntity<FichaDeLista> ficha(@PathVariable String id) {
+    public ResponseEntity<FichaDeLista> ficha(@PathVariable Long id) {
         return listas.buscarConInvitados(id)
                 .map(FichaDeLista::de)
                 .map(ResponseEntity::ok)
@@ -138,34 +139,34 @@ public class ListasController {
 
     @PutMapping("/listas/{id}")
     @Transactional
-    public FichaDeLista cambiar(@PathVariable String id, @Valid @RequestBody CambioDeLista c) {
+    public FichaDeLista cambiar(@PathVariable Long id, @Valid @RequestBody CambioDeLista c) {
         return FichaDeLista.de(gestion.cambiar(id, c.nombre(), c.maxInvitados()));
     }
 
     @DeleteMapping("/listas/{id}")
     @Transactional
-    public ResponseEntity<Void> borrar(@PathVariable String id) {
+    public ResponseEntity<Void> borrar(@PathVariable Long id) {
         gestion.borrar(id);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/listas/{id}/invitados")
     @Transactional
-    public ResponseEntity<InvitadoEnFicha> apuntar(@PathVariable String id, @Valid @RequestBody NuevoInvitado n) {
+    public ResponseEntity<InvitadoEnFicha> apuntar(@PathVariable Long id, @Valid @RequestBody NuevoInvitado n) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(InvitadoEnFicha.de(gestion.apuntar(id, n.nombreCompleto(), n.personas())));
     }
 
     @DeleteMapping("/invitados/{id}")
     @Transactional
-    public ResponseEntity<Void> quitar(@PathVariable String id) {
+    public ResponseEntity<Void> quitar(@PathVariable Long id) {
         gestion.quitar(id);
         return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/invitados/{id}/entrada")
     @Transactional
-    public InvitadoEnFicha marcarEntrada(@PathVariable String id, @RequestBody Entrada e) {
+    public InvitadoEnFicha marcarEntrada(@PathVariable Long id, @RequestBody Entrada e) {
         return InvitadoEnFicha.de(gestion.marcarEntrada(id, e.entro()));
     }
 }

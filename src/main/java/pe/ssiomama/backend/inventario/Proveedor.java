@@ -3,6 +3,8 @@ package pe.ssiomama.backend.inventario;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Table;
 
 /**
@@ -16,8 +18,9 @@ import jakarta.persistence.Table;
 public class Proveedor {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    private String id;
+    private Long id;
 
     @Column(name = "nombre", nullable = false)
     private String nombre;
@@ -38,7 +41,6 @@ public class Proveedor {
 
     static Proveedor crear(String nombre, String personaDeContacto, String email, String telefono) {
         Proveedor p = new Proveedor();
-        p.id = java.util.UUID.randomUUID().toString();
         p.actualizar(nombre, personaDeContacto, email, telefono);
         return p;
     }
@@ -54,7 +56,7 @@ public class Proveedor {
         return valor == null || valor.isBlank() ? null : valor.trim();
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 

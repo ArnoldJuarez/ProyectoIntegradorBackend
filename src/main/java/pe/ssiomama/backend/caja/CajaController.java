@@ -56,7 +56,7 @@ public class CajaController {
     // ── Lo que sale por la API ────────────────────────────────────
 
     public record ArqueoEnLista(
-            String id,
+            Long id,
             String sala,
             /** Nula en turnos viejos sin barra atribuida. */
             String barra,
@@ -97,7 +97,7 @@ public class CajaController {
     public record TotalPorMetodo(MetodoDePago metodo, String etiqueta, boolean esEfectivo, long totalCentimos) {}
 
     public record CobroEnLista(
-            String id,
+            Long id,
             MetodoDePago metodo,
             String metodoEtiqueta,
             int totalCentimos,
@@ -130,7 +130,7 @@ public class CajaController {
             int cobros,
             List<CobroEnLista> ultimosCobros) {}
 
-    public record BarraDelLocal(String id, String nombre, boolean activa) {
+    public record BarraDelLocal(Long id, String nombre, boolean activa) {
 
         static BarraDelLocal de(Puesto p) {
             return new BarraDelLocal(p.getId(), p.getNombre(), p.isActivo());
@@ -158,7 +158,7 @@ public class CajaController {
     /** Retira o vuelve a montar una barra. No se borra: sus turnos viejos la nombran. */
     @PutMapping("/barras/{id}")
     @Transactional
-    public BarraDelLocal cambiarBarra(@PathVariable String id, @RequestBody CambioDeBarra c) {
+    public BarraDelLocal cambiarBarra(@PathVariable Long id, @RequestBody CambioDeBarra c) {
         Puesto p = puestos.findById(id)
                 .filter(Puesto::isEsDeBarra)
                 .orElseThrow(() -> new CajaRechazada("Esa barra no existe."));
@@ -177,7 +177,7 @@ public class CajaController {
 
     @GetMapping("/arqueos/{id}")
     @Transactional(readOnly = true)
-    public ResponseEntity<FichaDeArqueo> ficha(@PathVariable String id) {
+    public ResponseEntity<FichaDeArqueo> ficha(@PathVariable Long id) {
         ArqueoDeCaja arqueo = arqueos.buscarPorIdConDetalle(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "No existe ese arqueo."));

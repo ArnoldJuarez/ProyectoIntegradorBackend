@@ -50,7 +50,7 @@ public class GestionDeArtistas {
     }
 
     @Transactional
-    public Artista editar(String id, DatosDeArtista datos) {
+    public Artista editar(Long id, DatosDeArtista datos) {
         Artista artista = artistas.findById(id)
                 .orElseThrow(() -> new EventoRechazado("Ese artista no existe."));
         String nombre = datos.nombre().trim();
@@ -69,7 +69,7 @@ public class GestionDeArtistas {
      * @return la dirección de su foto, para borrar el archivo
      */
     @Transactional
-    public String borrar(String id) {
+    public String borrar(Long id) {
         Artista artista = artistas.findById(id)
                 .orElseThrow(() -> new EventoRechazado("Ese artista no existe."));
         long noches = sql.sql("select count(*) from \"EventoArtista\" where \"artistaId\" = :id")

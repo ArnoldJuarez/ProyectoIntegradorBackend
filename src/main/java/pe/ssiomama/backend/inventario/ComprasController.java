@@ -1,6 +1,7 @@
 package pe.ssiomama.backend.inventario;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -48,7 +49,7 @@ public class ComprasController {
     // ── Lo que entra ──────────────────────────────────────────────
 
     public record LineaDelFormulario(
-            @NotBlank(message = "Falta el producto de una línea") String productoId,
+            @NotNull(message = "Falta el producto de una línea") Long productoId,
             @Min(value = 1, message = "Cada línea pide al menos una unidad")
             @Max(value = 100_000, message = "Esa cantidad no parece real")
             int cantidad,
@@ -57,14 +58,14 @@ public class ComprasController {
             int costeUnitarioCentimos) {}
 
     public record FormularioDeOrden(
-            @NotBlank(message = "Elige un proveedor") String proveedorId,
+            @NotNull(message = "Elige un proveedor") Long proveedorId,
             Instant esperadoEn,
             @NotEmpty(message = "El pedido necesita al menos una línea")
             @Size(max = 80, message = "Demasiadas líneas para un solo pedido")
             List<@Valid LineaDelFormulario> lineas) {}
 
     /** Recibir: a qué sala entra la mercancía. */
-    public record Recepcion(@NotBlank(message = "Elige dónde entra la mercancía") String salaId) {}
+    public record Recepcion(@NotNull(message = "Elige dónde entra la mercancía") Long salaId) {}
 
     public record FormularioDeProveedor(
             @NotBlank(message = "Falta el nombre")
@@ -77,7 +78,7 @@ public class ComprasController {
     // ── Lo que sale ───────────────────────────────────────────────
 
     public record OrdenEnLista(
-            String id,
+            Long id,
             String codigo,
             String proveedor,
             EstadoDeOrden estado,
@@ -94,12 +95,12 @@ public class ComprasController {
     }
 
     public record LineaEnFicha(
-            String productoId, String sku, String producto, int cantidad, int costeUnitarioCentimos, long importeCentimos) {}
+            Long productoId, String sku, String producto, int cantidad, int costeUnitarioCentimos, long importeCentimos) {}
 
     public record FichaDeOrden(
-            String id,
+            Long id,
             String codigo,
-            String proveedorId,
+            Long proveedorId,
             String proveedor,
             EstadoDeOrden estado,
             int totalCentimos,
@@ -129,7 +130,7 @@ public class ComprasController {
 
     @GetMapping("/ordenes/{id}")
     @Transactional(readOnly = true)
-    public ResponseEntity<FichaDeOrden> ficha(@PathVariable String id) {
+    public ResponseEntity<FichaDeOrden> ficha(@PathVariable Long id) {
         return ordenes.buscarConLineas(id)
                 .map(FichaDeOrden::de)
                 .map(ResponseEntity::ok)
@@ -144,26 +145,26 @@ public class ComprasController {
 
     @PutMapping("/ordenes/{id}")
     @Transactional
-    public FichaDeOrden editar(@PathVariable String id, @Valid @RequestBody FormularioDeOrden f) {
+    public FichaDeOrden editar(@PathVariable Long id, @Valid @RequestBody FormularioDeOrden f) {
         return FichaDeOrden.de(gestion.editar(id, aDatos(f)));
     }
 
     @PostMapping("/ordenes/{id}/enviar")
     @Transactional
-    public FichaDeOrden enviar(@PathVariable String id) {
+    public FichaDeOrden enviar(@PathVariable Long id) {
         return FichaDeOrden.de(gestion.enviar(id));
     }
 
     @PostMapping("/ordenes/{id}/recibir")
     @Transactional
     public FichaDeOrden recibir(
-            @PathVariable String id, @Valid @RequestBody Recepcion r, @AuthenticationPrincipal Usuario quien) {
+            @PathVariable Long id, @Valid @RequestBody Recepcion r, @AuthenticationPrincipal Usuario quien) {
         return FichaDeOrden.de(gestion.recibir(id, r.salaId(), quien));
     }
 
     @PostMapping("/ordenes/{id}/cancelar")
     @Transactional
-    public FichaDeOrden cancelar(@PathVariable String id) {
+    public FichaDeOrden cancelar(@PathVariable Long id) {
         return FichaDeOrden.de(gestion.cancelar(id));
     }
 
@@ -178,7 +179,7 @@ public class ComprasController {
 
     @PutMapping("/proveedores/{id}")
     @Transactional
-    public ProveedorEnLista editarProveedor(@PathVariable String id, @Valid @RequestBody FormularioDeProveedor f) {
+    public ProveedorEnLista editarProveedor(@PathVariable Long id, @Valid @RequestBody FormularioDeProveedor f) {
         return ProveedorEnLista.de(gestion.editarProveedor(id, aDatos(f)));
     }
 

@@ -3,10 +3,11 @@ package pe.ssiomama.backend.clientes;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.UUID;
 
 /**
  * Alguien que ha comprado, reservado o pedido el aviso del cartel — tabla
@@ -14,23 +15,17 @@ import java.util.UUID;
  *
  * <h2>De dónde salen los ids</h2>
  *
- * <p>Las columnas {@code id} no tienen {@code DEFAULT} en la base: el sistema
- * anterior las generaba en la aplicación con {@code cuid()}. Por eso aquí el id
- * es asignado y no lleva {@code @GeneratedValue}.
- *
- * <p>Las filas nuevas llevan un {@code UUID} en vez de un cuid, así que en la
- * tabla convivirán los dos formatos. Es aceptable porque el id es una cadena
- * opaca: nada en el sistema lo interpreta ni deduce nada de su forma. Reproducir
- * cuid en Java sería reimplementar una librería ajena sin forma de comprobar que
- * genera lo mismo, y ese riesgo no compra nada.
+ * <p>Los numera la base: {@code id} es una columna identity (1, 2, 3…) y
+ * Hibernate lo lee al insertar. Antes de guardarse, un cliente nuevo no tiene id.
  */
 @Entity
 @Table(name = "Cliente")
 public class Cliente {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    private String id;
+    private Long id;
 
     @Column(name = "nombre", nullable = false)
     private String nombre;
@@ -87,7 +82,6 @@ public class Cliente {
     /** Alguien que llega por primera vez, dando su consentimiento. */
     public static Cliente nuevoConConsentimiento(String nombre, String email) {
         Cliente cliente = new Cliente();
-        cliente.id = UUID.randomUUID().toString();
         cliente.nombre = nombre;
         cliente.email = email;
         cliente.aceptaMarketing = true;
@@ -112,7 +106,6 @@ public class Cliente {
     public static Cliente nuevoConContacto(
             String nombre, String apellido, String email, String telefono) {
         Cliente cliente = new Cliente();
-        cliente.id = UUID.randomUUID().toString();
         cliente.nombre = nombre;
         cliente.apellido = apellido == null || apellido.isBlank() ? null : apellido;
         cliente.email = email;
@@ -158,7 +151,7 @@ public class Cliente {
         this.ultimaVisita = cuando;
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 

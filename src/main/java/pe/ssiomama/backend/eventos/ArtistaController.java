@@ -65,7 +65,7 @@ public class ArtistaController {
      * @param noches en cuántos carteles ha estado. Con más de cero no se puede borrar.
      */
     public record ArtistaEnCatalogo(
-            String id,
+            Long id,
             String nombre,
             String genero,
             String imagen,
@@ -81,12 +81,12 @@ public class ArtistaController {
     public List<ArtistaEnCatalogo> catalogo() {
         record Historial(long noches, Instant ultima) {}
         // Las fechas de la base son UTC sin zona (ver Evento).
-        Map<String, Historial> historial = sql.sql("""
+        Map<Long, Historial> historial = sql.sql("""
                 select ea."artistaId", count(*) as noches, max(e."empiezaEn") as ultima
                 from "EventoArtista" ea join "Evento" e on e.id = ea."eventoId"
                 group by ea."artistaId"
                 """)
-                .query((rs, n) -> Map.entry(rs.getString(1), new Historial(
+                .query((rs, n) -> Map.entry(rs.getLong(1), new Historial(
                         rs.getLong("noches"),
                         rs.getObject("ultima", LocalDateTime.class).toInstant(ZoneOffset.UTC))))
                 .list()
@@ -111,20 +111,20 @@ public class ArtistaController {
 
     @PutMapping("/{id}")
     @Transactional
-    public ArtistaEnCatalogo editar(@PathVariable String id, @Valid @RequestBody FormularioDeArtista f) {
+    public ArtistaEnCatalogo editar(@PathVariable Long id, @Valid @RequestBody FormularioDeArtista f) {
         return enCatalogo(gestion.editar(id, aDatos(f)));
     }
 
     @DeleteMapping("/{id}")
     @Transactional
-    public ResponseEntity<Void> borrar(@PathVariable String id) {
+    public ResponseEntity<Void> borrar(@PathVariable Long id) {
         medios.borrarSiEsNuestro(gestion.borrar(id));
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/foto")
     @Transactional
-    public FotoGuardada subirFoto(@PathVariable String id, @RequestParam("archivo") MultipartFile archivo)
+    public FotoGuardada subirFoto(@PathVariable Long id, @RequestParam("archivo") MultipartFile archivo)
             throws IOException {
         Artista artista = artistas.findById(id)
                 .orElseThrow(() -> new EventoRechazado("Ese artista no existe."));
@@ -137,7 +137,7 @@ public class ArtistaController {
 
     @DeleteMapping("/{id}/foto")
     @Transactional
-    public ResponseEntity<Void> quitarFoto(@PathVariable String id) {
+    public ResponseEntity<Void> quitarFoto(@PathVariable Long id) {
         Artista artista = artistas.findById(id)
                 .orElseThrow(() -> new EventoRechazado("Ese artista no existe."));
         String anterior = artista.getImagen();

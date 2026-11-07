@@ -6,11 +6,12 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
-import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import pe.ssiomama.backend.clientes.Cliente;
@@ -29,8 +30,9 @@ import pe.ssiomama.backend.eventos.Evento;
 public class Reserva {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    private String id;
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "eventoId", nullable = false)
@@ -73,7 +75,6 @@ public class Reserva {
     public static Reserva solicitar(
             Evento evento, MesaVip mesa, Cliente cliente, int personas, String notas) {
         Reserva r = new Reserva();
-        r.id = UUID.randomUUID().toString();
         r.evento = evento;
         r.mesa = mesa;
         r.cliente = cliente;
@@ -96,7 +97,7 @@ public class Reserva {
         this.notas = notas == null || notas.isBlank() ? null : notas.trim();
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 

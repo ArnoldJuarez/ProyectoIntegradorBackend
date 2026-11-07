@@ -5,7 +5,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 /** Acceso a {@code "MovimientoFidelidad"}. */
-public interface FidelidadRepository extends JpaRepository<MovimientoDeFidelidad, String> {
+public interface FidelidadRepository extends JpaRepository<MovimientoDeFidelidad, Long> {
 
     /**
      * Los puntos que le quedan a un cliente: la suma de sus apuntes.
@@ -18,5 +18,5 @@ public interface FidelidadRepository extends JpaRepository<MovimientoDeFidelidad
             from MovimientoDeFidelidad m
             where m.cliente.id = :clienteId
             """)
-    int saldoDe(@Param("clienteId") String clienteId);
+    int saldoDe(@Param("clienteId") Long clienteId);
 }

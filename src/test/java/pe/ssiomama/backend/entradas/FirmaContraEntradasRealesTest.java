@@ -12,31 +12,14 @@ import org.springframework.boot.test.context.SpringBootTest;
 /**
  * La firma del QR, contra las entradas <b>reales</b> de la base.
  *
- * <h2>Lo que se descubrió al escribir esto</h2>
+ * <p>La columna {@code codigo} de {@code "Entrada"} no guarda un código legible:
+ * guarda exactamente {@code id.firma}, el texto que viaja dentro del QR.
  *
- * <p>La columna {@code code} de la tabla {@code "Ticket"} no guarda un código
- * legible: guarda exactamente {@code id.firma}, el texto que viaja dentro del
- * código de barras. Así que reproducir esa columna desde el id sería reproducir
- * el QR del cliente.
- *
- * <p>Pues bien: <b>no coincide</b>. Y no por un fallo de esta migración. Se
- * comprobó ejecutando el {@code lib/tickets.ts} original con el
- * {@code TICKET_SECRET} que hay hoy en el {@code .env}, y produce la misma firma
- * que este código Java —y distinta de la guardada—.
- *
- * <p>La conclusión es que <b>las entradas de la base se emitieron con otro
- * secreto</b>: alguien regeneró {@code TICKET_SECRET} después de crearlas. Es
- * exactamente lo que avisa el README del sistema anterior, y significa que esos
- * QR no validan hoy en ninguna de las dos versiones.
- *
- * <p>Por eso este test <b>no</b> compara contra los códigos guardados: hacerlo
- * sería fijar como correcto un dato que no lo es. Lo que fija es que el
- * mecanismo funciona de ida y vuelta con el secreto que esté configurado, que es
- * lo que de verdad tiene que seguir siendo cierto.
- *
- * <p><b>Para poder demostrar el escáner de puerta hay que volver a sembrar los
- * datos</b> ({@code npm run db:seed} en el proyecto anterior), y así las
- * entradas quedan firmadas con el secreto actual.
+ * <p>Hasta la migración a ids numéricos, los códigos guardados se habían
+ * emitido con otro {@code TICKET_SECRET} y no validaban. La migración V7 los
+ * volvió a firmar todos con el id nuevo y el secreto configurado, así que ahora
+ * se puede exigir lo que de verdad importa: que cada código guardado sea el que
+ * produce la firma.
  */
 @SpringBootTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -52,7 +35,7 @@ class FirmaContraEntradasRealesTest {
      * El camino completo sobre ids reales: firmar y volver a leer.
      *
      * <p>Es el recorrido que hace el escáner de la puerta, con los mismos ids
-     * que tiene la base —UUID, no los de un test inventado—.
+     * que tiene la base, no los de un test inventado.
      */
     @Test
     @DisplayName("firma y descifra correctamente los ids reales de la base")
@@ -75,7 +58,7 @@ class FirmaContraEntradasRealesTest {
     @Test
     @DisplayName("la firma de un id real es estable")
     void laFirmaEsEstable() {
-        String id = entradas.findAll().getFirst().getId();
+        Long id = entradas.findAll().getFirst().getId();
 
         assertThat(firma.codificar(id)).isEqualTo(firma.codificar(id));
     }
@@ -96,22 +79,17 @@ class FirmaContraEntradasRealesTest {
     }
 
     /**
-     * Deja constancia de la situación: los códigos guardados llevan otra firma.
+     * Cada QR guardado valida con el secreto actual.
      *
-     * <p>El día que se vuelva a sembrar con el secreto actual, este test fallará
-     * — y ese fallo será la señal de que ya coinciden y de que se puede endurecer
-     * la comprobación.
+     * <p>Si falla, o se cambió {@code TICKET_SECRET} después de emitir, o alguna
+     * entrada se insertó sin pasar por la firma: en los dos casos esas entradas
+     * no entrarían por la puerta.
      */
     @Test
-    @DisplayName("aviso: los codigos guardados son de otro TICKET_SECRET")
-    void losCodigosGuardadosSonDeOtroSecreto() {
-        Entrada primera = entradas.findAll().getFirst();
-
-        assertThat(firma.codificar(primera.getId()))
-                .as("""
-                        Los codigos guardados YA coinciden con el secreto actual. \
-                        Eso es una buena noticia: sustituye este test por uno que \
-                        compruebe la igualdad sobre todas las entradas.""")
-                .isNotEqualTo(primera.getCodigo());
+    @DisplayName("los codigos guardados son los que produce la firma")
+    void losCodigosGuardadosValidan() {
+        assertThat(entradas.findAll()).allSatisfy(entrada -> assertThat(entrada.getCodigo())
+                .as("el QR guardado de la entrada %s", entrada.getId())
+                .isEqualTo(firma.codificar(entrada.getId())));
     }
 }

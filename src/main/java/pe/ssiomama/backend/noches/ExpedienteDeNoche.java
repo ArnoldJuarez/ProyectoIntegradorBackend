@@ -75,7 +75,7 @@ public class ExpedienteDeNoche {
     public record Aviso(String tono, String texto) {}
 
     public record Noche(
-            String id,
+            Long id,
             String slug,
             String titulo,
             String estado,
@@ -135,7 +135,7 @@ public class ExpedienteDeNoche {
     public record PorBarra(String barra, long cajas, long tickets, long unidades, long centimos) {}
 
     public record CajaDeLaNoche(
-            String id,
+            Long id,
             String barra,
             String responsable,
             Instant abiertaEn,
@@ -172,7 +172,7 @@ public class ExpedienteDeNoche {
             List<ProductoVendido> productos) {}
 
     public record PromotorDeLaNoche(
-            String id,
+            Long id,
             String nombre,
             String codigo,
             long pedidos,
@@ -238,7 +238,7 @@ public class ExpedienteDeNoche {
             List<Distrito> distritos) {}
 
     public record IncidenciaEnFicha(
-            String id, String tipo, String descripcion, Instant ocurrioEn, String registradaPor) {}
+            Long id, String tipo, String descripcion, Instant ocurrioEn, String registradaPor) {}
 
     public record Referencia(String slug, String titulo, Instant empiezaA, long dentro, long taquillaCentimos, long barraCentimos) {}
 
@@ -328,7 +328,7 @@ public class ExpedienteDeNoche {
     // ── La noche ──────────────────────────────────────────────────
 
     private Optional<Noche> noche(String slug) {
-        record Fila(String id, String slug, String titulo, String estado, Instant puertas, Instant empieza,
+        record Fila(Long id, String slug, String titulo, String estado, Instant puertas, Instant empieza,
                 Instant termina, String sala, int aforo) {}
 
         return sql.sql("""
@@ -339,7 +339,7 @@ public class ExpedienteDeNoche {
                         """)
                 .param("slug", slug)
                 .query((rs, i) -> new Fila(
-                        rs.getString("id"),
+                        rs.getObject("id", Long.class),
                         rs.getString("slug"),
                         rs.getString("titulo"),
                         rs.getString("estado"),
@@ -355,7 +355,7 @@ public class ExpedienteDeNoche {
                         cartel(f.id()), f.empieza().isBefore(Instant.now())));
     }
 
-    private List<String> cartel(String eventoId) {
+    private List<String> cartel(Long eventoId) {
         return sql.sql("""
                         select a.nombre from "EventoArtista" ea join "Artista" a on a.id = ea."artistaId"
                         where ea."eventoId" = :id
@@ -369,7 +369,7 @@ public class ExpedienteDeNoche {
     // ── Asistencia ────────────────────────────────────────────────
 
     private Asistencia asistencia(Noche n) {
-        String id = n.id();
+        Long id = n.id();
 
         long emitidas = contar("""
                 select count(*) from "Entrada" where "eventoId" = :id and estado in ('VALIDA', 'USADA')
@@ -437,7 +437,7 @@ public class ExpedienteDeNoche {
 
     // ── Taquilla ──────────────────────────────────────────────────
 
-    private Taquilla taquilla(String id) {
+    private Taquilla taquilla(Long id) {
         record Totales(long pagados, long bruto, long gestion, long entradasCentimos, long pendientes,
                 long cancelados, long devueltos, long devuelto) {}
 
@@ -526,7 +526,7 @@ public class ExpedienteDeNoche {
 
     // ── Barra ─────────────────────────────────────────────────────
 
-    private BarraDeLaNoche barra(String id, long dentro) {
+    private BarraDeLaNoche barra(Long id, long dentro) {
         List<CajaDeLaNoche> cajas = sql.sql("""
                         select s.id, coalesce(pu.nombre, 'Sin barra asignada') as barra, u.nombre as responsable,
                                s."abiertaEn", s."cerradaEn", s."descuadreCentimos",
@@ -542,7 +542,7 @@ public class ExpedienteDeNoche {
                         """)
                 .param("id", id)
                 .query((rs, i) -> new CajaDeLaNoche(
-                        rs.getString("id"),
+                        rs.getObject("id", Long.class),
                         rs.getString("barra"),
                         rs.getString("responsable"),
                         instante(rs, "abiertaEn"),
@@ -639,7 +639,7 @@ public class ExpedienteDeNoche {
 
     // ── Promotores ────────────────────────────────────────────────
 
-    private List<PromotorDeLaNoche> promotores(String id) {
+    private List<PromotorDeLaNoche> promotores(Long id) {
         return sql.sql("""
                         with ventas as (
                             select p."promotorId" as promotor,
@@ -681,7 +681,7 @@ public class ExpedienteDeNoche {
                     long comision = Math.round(ventas * pct / 100.0);
                     long bono = rs.getLong("entraron") * rs.getLong("bono");
                     return new PromotorDeLaNoche(
-                            rs.getString("id"),
+                            rs.getObject("id", Long.class),
                             rs.getString("nombre"),
                             rs.getString("codigo"),
                             rs.getLong("pedidos"),
@@ -704,7 +704,7 @@ public class ExpedienteDeNoche {
 
     // ── Reservas ──────────────────────────────────────────────────
 
-    private Reservas reservas(String id) {
+    private Reservas reservas(Long id) {
         List<ReservaDeLaNoche> lista = sql.sql("""
                         select b.nombre as box, trim(c.nombre || ' ' || coalesce(c.apellido, '')) as cliente,
                                r.personas, r.estado::text as estado, r."depositoCentimos",
@@ -740,7 +740,7 @@ public class ExpedienteDeNoche {
 
     // ── Costes y resultado ────────────────────────────────────────
 
-    private Costes costes(String id, List<PromotorDeLaNoche> promotores, long costeProducto) {
+    private Costes costes(Long id, List<PromotorDeLaNoche> promotores, long costeProducto) {
         List<PorCategoria> gastos = sql.sql("""
                         select c.nombre as categoria, coalesce(sum(g."importeCentimos"), 0) as centimos
                         from "Gasto" g join "CategoriaGasto" c on c.id = g."categoriaId"
@@ -796,7 +796,7 @@ public class ExpedienteDeNoche {
 
     // ── Público ───────────────────────────────────────────────────
 
-    private Publico publico(String id) {
+    private Publico publico(Long id) {
         record Cifras(long compradores, long nuevos, Integer edad, long publicidad) {}
 
         Cifras c = sql.sql("""
@@ -845,7 +845,7 @@ public class ExpedienteDeNoche {
 
     // ── Incidencias y notas ───────────────────────────────────────
 
-    private List<IncidenciaEnFicha> incidencias(String id) {
+    private List<IncidenciaEnFicha> incidencias(Long id) {
         return sql.sql("""
                         select i.id, i.tipo, i.descripcion, i."ocurrioEn", u.nombre as quien
                         from "IncidenciaNoche" i left join "Usuario" u on u.id = i."registradaPorId"
@@ -854,7 +854,7 @@ public class ExpedienteDeNoche {
                         """)
                 .param("id", id)
                 .query((rs, i) -> new IncidenciaEnFicha(
-                        rs.getString("id"),
+                        rs.getObject("id", Long.class),
                         rs.getString("tipo"),
                         rs.getString("descripcion"),
                         instante(rs, "ocurrioEn"),
@@ -862,7 +862,7 @@ public class ExpedienteDeNoche {
                 .list();
     }
 
-    private String notasDeCierre(String id) {
+    private String notasDeCierre(Long id) {
         return sql.sql("select \"notasCierre\" from \"Evento\" where id = :id")
                 .param("id", id)
                 .query(String.class)
@@ -1100,7 +1100,7 @@ public class ExpedienteDeNoche {
 
     // ── Utilidades ────────────────────────────────────────────────
 
-    private long contar(String consulta, String eventoId) {
+    private long contar(String consulta, Long eventoId) {
         return sql.sql(consulta).param("id", eventoId).query(Long.class).single();
     }
 

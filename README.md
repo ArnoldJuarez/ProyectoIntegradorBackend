@@ -40,8 +40,10 @@ ssiomama:
 ```
 
 > **Los dos secretos tienen que ser los mismos en todas las máquinas del
-> equipo.** `ticket-secret` firma los códigos QR: con otro valor, las 139
-> entradas que ya están vendidas **no validan en la puerta**. `auth-secret`
+> equipo.** `ticket-secret` firma los códigos QR: con otro valor, las entradas
+> que ya están vendidas **no validan en la puerta**. La migración V7 (ids
+> numéricos) vuelve a firmar todas las entradas con el secreto de la máquina
+> donde se ejecuta, así que tiene que estar puesto antes del primer arranque. `auth-secret`
 > firma la cookie de sesión: al cambiarlo, todo el personal tiene que volver a
 > entrar.
 >

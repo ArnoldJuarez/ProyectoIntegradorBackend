@@ -105,12 +105,12 @@ class ReservadosTest {
         return MARCA + UUID.randomUUID() + DOMINIO_DE_PRUEBA;
     }
 
-    private ResponseEntity<String> pedir(String mesaId, int personas, String email) {
+    private ResponseEntity<String> pedir(Long mesaId, int personas, String email) {
         HttpHeaders cabeceras = new HttpHeaders();
         cabeceras.setContentType(MediaType.APPLICATION_JSON);
         String cuerpo =
                 """
-                {"slug":"%s","mesaId":"%s","personas":%d,"notas":"",
+                {"slug":"%s","mesaId":%s,"personas":%d,"notas":"",
                  "nombre":"Ana","apellido":"Prueba","email":"%s","telefono":"951866748"}
                 """
                         .formatted(NOCHE, mesaId, personas, email);
@@ -156,7 +156,7 @@ class ReservadosTest {
     void sePideYQuedaComoSolicitud() throws Exception {
         JsonNode mesa = unaMesaLibre();
 
-        ResponseEntity<String> r = pedir(mesa.get("id").asText(), 2, correoNuevo());
+        ResponseEntity<String> r = pedir(mesa.get("id").asLong(), 2, correoNuevo());
 
         assertThat(r.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(r.getBody()).contains("Te llamamos");
@@ -171,14 +171,14 @@ class ReservadosTest {
     @DisplayName("una mesa pedida deja de estar libre")
     void mesaPedidaDejaDeEstarLibre() throws Exception {
         JsonNode mesa = unaMesaLibre();
-        String id = mesa.get("id").asText();
+        Long id = mesa.get("id").asLong();
 
         pedir(id, 2, correoNuevo());
 
         JsonNode mesas = json.readTree(
                 http.getForObject("/api/publico/reservados/" + NOCHE, String.class));
         for (JsonNode m : mesas) {
-            if (m.get("id").asText().equals(id)) {
+            if (m.get("id").asLong() == id) {
                 assertThat(m.get("libre").asBoolean()).isFalse();
                 return;
             }
@@ -194,7 +194,7 @@ class ReservadosTest {
     @DisplayName("pedir dos veces la misma mesa da 409, no un error del servidor")
     void mesaYaPedidaDa409() throws Exception {
         JsonNode mesa = unaMesaLibre();
-        String id = mesa.get("id").asText();
+        Long id = mesa.get("id").asLong();
 
         assertThat(pedir(id, 2, correoNuevo()).getStatusCode()).isEqualTo(HttpStatus.CREATED);
 
@@ -209,7 +209,7 @@ class ReservadosTest {
         JsonNode mesa = unaMesaLibre();
         int plazas = mesa.get("plazas").asInt();
 
-        ResponseEntity<String> r = pedir(mesa.get("id").asText(), plazas + 1, correoNuevo());
+        ResponseEntity<String> r = pedir(mesa.get("id").asLong(), plazas + 1, correoNuevo());
 
         assertThat(r.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         assertThat(r.getBody()).contains("máximo");
@@ -226,7 +226,7 @@ class ReservadosTest {
     @DisplayName("los errores traen un mensaje que se puede enseñar")
     void losErroresTraenMensaje() throws Exception {
         JsonNode mesa = unaMesaLibre();
-        String cuerpo = pedir(mesa.get("id").asText(), mesa.get("plazas").asInt() + 1, correoNuevo())
+        String cuerpo = pedir(mesa.get("id").asLong(), mesa.get("plazas").asInt() + 1, correoNuevo())
                 .getBody();
 
         assertThat(json.readTree(cuerpo).get("error").asText())
@@ -260,7 +260,7 @@ class ReservadosTest {
         String email = correoNuevo();
         JsonNode mesa = unaMesaLibre();
 
-        pedir(mesa.get("id").asText(), 3, email);
+        pedir(mesa.get("id").asLong(), 3, email);
 
         Cliente cliente = clientes.findByEmailIgnoreCase(email).orElseThrow();
         assertThat(cliente.getTelefono()).isEqualTo("951866748");
@@ -274,9 +274,9 @@ class ReservadosTest {
         String email = correoNuevo();
         JsonNode mesa = unaMesaLibre();
 
-        String id = json.readTree(pedir(mesa.get("id").asText(), 2, email).getBody())
+        Long id = json.readTree(pedir(mesa.get("id").asLong(), 2, email).getBody())
                 .get("id")
-                .asText();
+                .asLong();
 
         Reserva creada = reservas.findById(id).orElseThrow();
         assertThat(creada.getEstado().name()).isEqualTo("SOLICITADA");

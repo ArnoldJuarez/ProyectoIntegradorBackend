@@ -7,6 +7,8 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
@@ -16,7 +18,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -43,8 +44,9 @@ import org.hibernate.type.SqlTypes;
 public class Evento {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    private String id;
+    private Long id;
 
     /** Identificador de la URL pública: {@code /evento/viernes-urbano}. */
     @Column(name = "slug", nullable = false, unique = true)
@@ -158,7 +160,6 @@ public class Evento {
             EstadoDeEvento estado) {
 
         Evento e = new Evento();
-        e.id = UUID.randomUUID().toString();
         e.slug = slug;
         e.titulo = titulo;
         e.descripcion = vacioANulo(descripcion);
@@ -267,7 +268,7 @@ public class Evento {
                 .sum();
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 

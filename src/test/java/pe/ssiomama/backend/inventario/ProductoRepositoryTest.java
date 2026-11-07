@@ -40,7 +40,7 @@ class ProductoRepositoryTest {
                 .isNotEmpty();
 
         Producto uno = todos.getFirst();
-        assertThat(uno.getId()).isNotBlank();
+        assertThat(uno.getId()).isPositive();
         assertThat(uno.getSku()).isNotBlank();
         assertThat(uno.getNombre()).isNotBlank();
     }

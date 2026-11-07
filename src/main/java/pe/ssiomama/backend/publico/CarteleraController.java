@@ -100,7 +100,7 @@ public class CarteleraController {
      * saber si quedan, no cuántas se han ido.
      */
     public record EntradaALaVenta(
-            String id,
+            Long id,
             String nombre,
             String descripcion,
             int precioCentimos,

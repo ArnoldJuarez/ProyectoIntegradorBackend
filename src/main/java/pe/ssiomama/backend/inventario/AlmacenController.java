@@ -60,7 +60,7 @@ public class AlmacenController {
             @NotBlank(message = "Falta el nombre")
             @Size(min = 2, max = 120, message = "El nombre tiene entre 2 y 120 caracteres")
             String nombre,
-            @NotBlank(message = "Elige una categoría") String categoriaId,
+            @NotNull(message = "Elige una categoría") Long categoriaId,
             @NotNull(message = "Falta la unidad") UnidadDeProducto unidad,
             @Min(value = 0, message = "El coste no puede ser negativo")
             @Max(value = 10_000_000, message = "Ese coste no parece real")
@@ -81,7 +81,7 @@ public class AlmacenController {
      */
     public record FormularioDeMovimiento(
             @NotNull(message = "Falta el tipo de movimiento") TipoDeMovimiento tipo,
-            @NotBlank(message = "Falta la sala") String salaId,
+            @NotNull(message = "Falta la sala") Long salaId,
             @Min(value = -10_000, message = "Esa cantidad no parece real")
             @Max(value = 10_000, message = "Esa cantidad no parece real")
             int unidades,
@@ -93,7 +93,7 @@ public class AlmacenController {
     // ── Lo que sale ───────────────────────────────────────────────
 
     public record ProductoGuardado(
-            String id, String sku, String nombre, int precioCentimos, boolean activo) {
+            Long id, String sku, String nombre, int precioCentimos, boolean activo) {
 
         static ProductoGuardado de(Producto p) {
             return new ProductoGuardado(
@@ -101,9 +101,9 @@ public class AlmacenController {
         }
     }
 
-    public record CategoriaParaElegir(String id, String nombre) {}
+    public record CategoriaParaElegir(Long id, String nombre) {}
 
-    public record SalaParaElegir(String id, String nombre) {}
+    public record SalaParaElegir(Long id, String nombre) {}
 
     /** Lo que hace falta para rellenar los dos formularios. */
     public record OpcionesDeAlmacen(
@@ -149,7 +149,7 @@ public class AlmacenController {
     @PutMapping("/productos/{id}")
     @Transactional
     public ProductoGuardado editar(
-            @PathVariable String id, @Valid @RequestBody FormularioDeProducto formulario) {
+            @PathVariable Long id, @Valid @RequestBody FormularioDeProducto formulario) {
         return ProductoGuardado.de(almacen.editar(id, aDatos(formulario)));
     }
 
@@ -157,7 +157,7 @@ public class AlmacenController {
     @PostMapping("/productos/{id}/movimientos")
     @Transactional
     public ResponseEntity<GestionDeAlmacen.MovimientoHecho> mover(
-            @PathVariable String id,
+            @PathVariable Long id,
             @Valid @RequestBody FormularioDeMovimiento formulario,
             @AuthenticationPrincipal Usuario quien) {
 

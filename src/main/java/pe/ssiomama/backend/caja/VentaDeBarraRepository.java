@@ -5,7 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface VentaDeBarraRepository extends JpaRepository<VentaDeBarra, String> {
+public interface VentaDeBarraRepository extends JpaRepository<VentaDeBarra, Long> {
 
     /** Los cobros de un arqueo, del más reciente al más antiguo. */
     @Query("""
@@ -13,7 +13,7 @@ public interface VentaDeBarraRepository extends JpaRepository<VentaDeBarra, Stri
             where v.arqueo.id = :idArqueo
             order by v.creadaEn desc
             """)
-    List<VentaDeBarra> buscarPorArqueo(@Param("idArqueo") String idArqueo);
+    List<VentaDeBarra> buscarPorArqueo(@Param("idArqueo") Long idArqueo);
 
     /**
      * Cuánto se cobró por cada método de pago en un arqueo.
@@ -32,7 +32,7 @@ public interface VentaDeBarraRepository extends JpaRepository<VentaDeBarra, Stri
             where v.arqueo.id = :idArqueo
             group by v.metodoDePago
             """)
-    List<Object[]> sumarPorMetodoDePago(@Param("idArqueo") String idArqueo);
+    List<Object[]> sumarPorMetodoDePago(@Param("idArqueo") Long idArqueo);
 
     /**
      * Lo cobrado en barra durante una noche.
@@ -46,7 +46,7 @@ public interface VentaDeBarraRepository extends JpaRepository<VentaDeBarra, Stri
             from VentaDeBarra v
             where v.evento.id = :eventoId
             """)
-    long facturadoEnLaNoche(@Param("eventoId") String eventoId);
+    long facturadoEnLaNoche(@Param("eventoId") Long eventoId);
 
     /** Cuántas consumiciones se sirvieron esa noche. */
     @Query("""
@@ -54,5 +54,5 @@ public interface VentaDeBarraRepository extends JpaRepository<VentaDeBarra, Stri
             from LineaDeVenta l
             where l.venta.evento.id = :eventoId
             """)
-    long consumicionesDeLaNoche(@Param("eventoId") String eventoId);
+    long consumicionesDeLaNoche(@Param("eventoId") Long eventoId);
 }

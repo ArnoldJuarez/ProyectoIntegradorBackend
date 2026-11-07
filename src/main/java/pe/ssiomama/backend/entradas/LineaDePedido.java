@@ -4,10 +4,11 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import java.util.UUID;
 import pe.ssiomama.backend.eventos.TipoDeEntrada;
 
 /**
@@ -22,8 +23,9 @@ import pe.ssiomama.backend.eventos.TipoDeEntrada;
 public class LineaDePedido {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    private String id;
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "pedidoId", nullable = false)
@@ -53,7 +55,6 @@ public class LineaDePedido {
      */
     static LineaDePedido de(Pedido pedido, TipoDeEntrada tipo, int cantidad) {
         LineaDePedido l = new LineaDePedido();
-        l.id = UUID.randomUUID().toString();
         l.pedido = pedido;
         l.tipoDeEntrada = tipo;
         l.cantidad = cantidad;
@@ -66,7 +67,7 @@ public class LineaDePedido {
         return (long) cantidad * precioUnitarioCentimos;
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 

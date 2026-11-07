@@ -79,7 +79,7 @@ public class ExpedienteController {
     }
 
     @DeleteMapping("/api/eventos/{slug}/incidencias/{id}")
-    public ResponseEntity<Void> quitar(@PathVariable String slug, @PathVariable String id) {
+    public ResponseEntity<Void> quitar(@PathVariable String slug, @PathVariable Long id) {
         gestion.quitar(id);
         return ResponseEntity.noContent().build();
     }

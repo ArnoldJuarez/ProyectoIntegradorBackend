@@ -47,7 +47,7 @@ public class Entrada {
 
     @Id
     @Column(name = "id", nullable = false)
-    private String id;
+    private Long id;
 
     /** El identificador legible que ve el cliente. */
     @Column(name = "codigo", nullable = false, unique = true)
@@ -104,11 +104,11 @@ public class Entrada {
     /**
      * Emite una entrada al confirmarse el pago.
      *
-     * <p>El id se genera aquí y no lo asigna la base por un motivo que no es de
-     * estilo: el código del QR es {@code id.firma}, así que hay que <b>conocer
-     * el id antes de insertar</b>. Con un id autogenerado en el servidor de base
-     * de datos habría que insertar primero y actualizar el código después, y una
-     * entrada existiría un instante sin código válido.
+     * <p>El id llega ya reservado ({@link EntradaRepository#reservarId}) en vez
+     * de dejar que la base lo ponga al insertar: el código del QR es
+     * {@code id.firma}, así que hay que <b>conocer el id antes de insertar</b>.
+     * Insertando primero y firmando después, la entrada existiría un instante
+     * sin código válido.
      *
      * @param codigoFirmado lo que produce {@link FirmaDeEntrada#codificar}. Se
      *     recibe ya hecho en vez de firmar aquí para que la entidad no dependa
@@ -117,7 +117,7 @@ public class Entrada {
     static Entrada emitir(
             Pedido pedido,
             TipoDeEntrada tipo,
-            String id,
+            Long id,
             String codigoFirmado,
             String titular,
             Instant cuando) {
@@ -155,7 +155,7 @@ public class Entrada {
         this.estado = EstadoDeEntrada.USADA;
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 

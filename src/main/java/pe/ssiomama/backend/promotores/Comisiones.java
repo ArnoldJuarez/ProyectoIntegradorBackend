@@ -75,7 +75,7 @@ public class Comisiones {
 
     /** El saldo de un promotor, para la tabla general. */
     public record Saldo(
-            String promotorId,
+            Long promotorId,
             long pedidos,
             long ventasCentimos,
             long pendienteCentimos,
@@ -206,7 +206,7 @@ public class Comisiones {
 
     /** El saldo de cada promotor, en una sola consulta para la tabla general. */
     @Transactional(readOnly = true)
-    public Map<String, Saldo> saldos() {
+    public Map<Long, Saldo> saldos() {
         return sql.sql("""
                         with ahora as (select (now() at time zone 'utc') as t),
                         ventas as (
@@ -250,7 +250,7 @@ public class Comisiones {
                     int pct = rs.getInt("pct");
                     LocalDateTime ultimo = rs.getObject("ultimo", LocalDateTime.class);
                     return new Saldo(
-                            rs.getString("id"),
+                            rs.getObject("id", Long.class),
                             rs.getLong("pedidos"),
                             rs.getLong("ventas"),
                             Math.round(rs.getLong("pendiente") * pct / 100.0) + rs.getLong("entraron") * rs.getLong("bono"),
@@ -274,7 +274,7 @@ public class Comisiones {
      */
     @Transactional
     public Liquidacion liquidar(
-            String promotorId,
+            Long promotorId,
             Instant hasta,
             MetodoDePago metodo,
             String referencia,
@@ -291,7 +291,7 @@ public class Comisiones {
 
         // Se bloquea la fila del promotor: dos liquidaciones suyas a la vez
         // esperan una a la otra en vez de pelearse por los mismos pedidos.
-        sql.sql("select id from \"Usuario\" where id = :id for update").param("id", promotorId).query(String.class).optional();
+        sql.sql("select id from \"Usuario\" where id = :id for update").param("id", promotorId).query(Long.class).optional();
         Usuario promotor = usuarios.findById(promotorId)
                 .filter(Usuario::esPromotor)
                 .orElseThrow(() -> new ComisionRechazada("Esa persona no es promotor."));
@@ -319,7 +319,7 @@ public class Comisiones {
                 .query((rs, i) -> new Marcado(rs.getLong("entradas"), rs.getLong("ventas")))
                 .list();
 
-        List<String> listas = sql.sql("""
+        List<Long> listas = sql.sql("""
                         update "ListaInvitados" li set "liquidacionId" = :liquidacion
                         from "Evento" e
                         where e.id = li."eventoId"
@@ -330,7 +330,7 @@ public class Comisiones {
                 .param("liquidacion", liquidacion.getId())
                 .param("promotor", promotorId)
                 .param("corte", LocalDateTime.ofInstant(corte, ZoneOffset.UTC))
-                .query(String.class)
+                .query(Long.class)
                 .list();
 
         long entraron = listas.isEmpty() ? 0 : sql.sql("""
@@ -367,7 +367,7 @@ public class Comisiones {
      * hizo, lo que toca es registrar uno nuevo con un ajuste en negativo.
      */
     @Transactional
-    public void anular(String liquidacionId) {
+    public void anular(Long liquidacionId) {
         Liquidacion l = liquidaciones.findById(liquidacionId)
                 .orElseThrow(() -> new ComisionRechazada("Esa liquidación no existe."));
         sql.sql("update \"Pedido\" set \"liquidacionId\" = null where \"liquidacionId\" = :id")

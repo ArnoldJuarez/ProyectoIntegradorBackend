@@ -100,7 +100,7 @@ public class IaController {
     // ── Propuestas ────────────────────────────────────────────────
 
     public record PropuestaEnLista(
-            String id,
+            Long id,
             String tipo,
             String tipoNombre,
             String agente,
@@ -171,7 +171,7 @@ public class IaController {
      */
     @PostMapping("/propuestas/{id}")
     public Desenlace decidir(
-            @PathVariable String id,
+            @PathVariable Long id,
             @Valid @RequestBody DecisionSobrePropuesta cuerpo,
             @AuthenticationPrincipal Usuario quien) {
 
@@ -224,7 +224,7 @@ public class IaController {
     public record FilaDeModelo(String modelo, int corridas, int exitoPorcentaje, String mediana, String intentosMedios) {}
 
     public record EjecucionReciente(
-            String id, String agente, String modelo, String lanzadaPor, Instant cuando, String estado, int propuestas) {}
+            Long id, String agente, String modelo, String lanzadaPor, Instant cuando, String estado, int propuestas) {}
 
     public record Metricas(
             int ejecuciones,

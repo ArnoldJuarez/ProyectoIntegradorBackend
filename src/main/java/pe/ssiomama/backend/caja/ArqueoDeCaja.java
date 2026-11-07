@@ -4,11 +4,12 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
-import java.util.UUID;
 import pe.ssiomama.backend.eventos.Sala;
 import pe.ssiomama.backend.auth.Usuario;
 import pe.ssiomama.backend.personal.Puesto;
@@ -45,8 +46,9 @@ import pe.ssiomama.backend.personal.Puesto;
 public class ArqueoDeCaja {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    private String id;
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "salaId", nullable = false)
@@ -111,7 +113,6 @@ public class ArqueoDeCaja {
     public static ArqueoDeCaja abrir(Sala sala, Puesto barra, Usuario responsable, int fondoCentimos) {
         ArqueoDeCaja a = new ArqueoDeCaja();
         a.barra = barra;
-        a.id = UUID.randomUUID().toString();
         a.sala = sala;
         a.responsable = responsable;
         a.aperturaCentimos = fondoCentimos;
@@ -185,7 +186,7 @@ public class ArqueoDeCaja {
         return esperadoCentimos - aperturaCentimos;
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 

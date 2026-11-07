@@ -44,7 +44,7 @@ public class FichasDePromotores {
      *     nada malo de nadie, y la pantalla no debe pintarlo como un fracaso.
      */
     public record ListaEnFicha(
-            String id,
+            Long id,
             String nombre,
             String noche,
             String nocheSlug,
@@ -71,7 +71,7 @@ public class FichasDePromotores {
     }
 
     public record PromotorEnFicha(
-            String id,
+            Long id,
             String nombre,
             String rol,
             String email,
@@ -102,7 +102,7 @@ public class FichasDePromotores {
             List<PromotorEnFicha> promotores) {}
 
     public record LiquidacionEnFicha(
-            String id,
+            Long id,
             Instant pagadaEn,
             Instant hasta,
             int pedidos,
@@ -141,8 +141,8 @@ public class FichasDePromotores {
     @Transactional(readOnly = true)
     public Promotores todos() {
         Instant ahora = Instant.now();
-        Map<String, Saldo> saldos = comisiones.saldos();
-        Map<String, List<ListaDeInvitados>> porPromotor = listas.buscarTodasConInvitados().stream()
+        Map<Long, Saldo> saldos = comisiones.saldos();
+        Map<Long, List<ListaDeInvitados>> porPromotor = listas.buscarTodasConInvitados().stream()
                 .collect(Collectors.groupingBy(l -> l.getPromotor().getId()));
 
         List<PromotorEnFicha> todas = listas.buscarPromotores().stream()

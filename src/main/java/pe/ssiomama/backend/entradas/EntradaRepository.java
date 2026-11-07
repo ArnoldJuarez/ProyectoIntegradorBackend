@@ -6,7 +6,17 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface EntradaRepository extends JpaRepository<Entrada, String> {
+public interface EntradaRepository extends JpaRepository<Entrada, Long> {
+
+    /**
+     * Reserva el número de la próxima entrada, sin insertarla.
+     *
+     * <p>Es la misma secuencia que usa la columna identity, así que el número no
+     * lo repite nadie. Hace falta tenerlo antes de insertar porque el QR lleva
+     * el id firmado.
+     */
+    @Query(value = "select nextval(pg_get_serial_sequence('\"Entrada\"', 'id'))", nativeQuery = true)
+    Long reservarId();
 
     /**
      * Una entrada por su id, con lo que hace falta para decidir en la puerta.
@@ -22,7 +32,7 @@ public interface EntradaRepository extends JpaRepository<Entrada, String> {
             left join fetch esc.escaneadoPor
             where e.id = :id
             """)
-    Optional<Entrada> buscarPorIdParaLaPuerta(@Param("id") String id);
+    Optional<Entrada> buscarPorIdParaLaPuerta(@Param("id") Long id);
 
     /** Las entradas de un pedido, para enseñarlas con su QR. */
     @Query("""

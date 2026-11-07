@@ -3,6 +3,8 @@ package pe.ssiomama.backend.personal;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Table;
 
 /**
@@ -20,8 +22,9 @@ import jakarta.persistence.Table;
 public class Puesto {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    private String id;
+    private Long id;
 
     @Column(name = "nombre", nullable = false, unique = true)
     private String nombre;
@@ -46,7 +49,6 @@ public class Puesto {
      */
     public static Puesto nuevaBarra(String nombre) {
         Puesto p = new Puesto();
-        p.id = java.util.UUID.randomUUID().toString();
         p.nombre = nombre.trim();
         p.esDeBarra = true;
         p.activo = true;
@@ -58,7 +60,7 @@ public class Puesto {
         this.activo = activo;
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 

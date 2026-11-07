@@ -5,8 +5,9 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Table;
-import java.util.UUID;
 
 /**
  * Un extintor, un botiquín, una zona segura o el punto de reunión — tabla
@@ -17,11 +18,12 @@ import java.util.UUID;
 public class ElementoDeSeguridad {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    private String id;
+    private Long id;
 
     @Column(name = "salaId", nullable = false)
-    private String salaId;
+    private Long salaId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo", nullable = false)
@@ -43,9 +45,8 @@ public class ElementoDeSeguridad {
         // Hibernate necesita un constructor sin argumentos.
     }
 
-    static ElementoDeSeguridad nuevo(String salaId) {
+    static ElementoDeSeguridad nuevo(Long salaId) {
         ElementoDeSeguridad e = new ElementoDeSeguridad();
-        e.id = UUID.randomUUID().toString();
         e.salaId = salaId;
         return e;
     }
@@ -58,11 +59,11 @@ public class ElementoDeSeguridad {
         this.y = y;
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 
-    public String getSalaId() {
+    public Long getSalaId() {
         return salaId;
     }
 

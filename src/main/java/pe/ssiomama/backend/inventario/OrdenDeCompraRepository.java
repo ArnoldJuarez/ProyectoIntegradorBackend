@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 /** Acceso a {@code "OrdenCompra"}. */
-public interface OrdenDeCompraRepository extends JpaRepository<OrdenDeCompra, String> {
+public interface OrdenDeCompraRepository extends JpaRepository<OrdenDeCompra, Long> {
 
     /** Todos los pedidos con su proveedor, los más recientes primero. */
     @Query("select o from OrdenDeCompra o join fetch o.proveedor order by o.creadoEn desc")
@@ -20,5 +20,5 @@ public interface OrdenDeCompraRepository extends JpaRepository<OrdenDeCompra, St
             left join fetch l.producto
             where o.id = :id
             """)
-    Optional<OrdenDeCompra> buscarConLineas(String id);
+    Optional<OrdenDeCompra> buscarConLineas(Long id);
 }

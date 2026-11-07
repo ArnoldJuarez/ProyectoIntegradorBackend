@@ -56,7 +56,7 @@ public class InventarioController {
 
     /** Una línea de stock: cuántas unidades quedan de un producto. */
     public record LineaDeStock(
-            String productoId,
+            Long productoId,
             String sku,
             String producto,
             String categoria,
@@ -106,7 +106,7 @@ public class InventarioController {
 
     /** Una entrada del histórico. */
     public record LineaDeMovimiento(
-            String id,
+            Long id,
             String producto,
             String sku,
             String sala,
@@ -141,7 +141,7 @@ public class InventarioController {
     }
 
     public record ProveedorEnLista(
-            String id, String nombre, String personaDeContacto, String email, String telefono) {
+            Long id, String nombre, String personaDeContacto, String email, String telefono) {
 
         static ProveedorEnLista de(Proveedor p) {
             return new ProveedorEnLista(
@@ -179,14 +179,14 @@ public class InventarioController {
     @GetMapping("/movimientos")
     @Transactional(readOnly = true)
     public List<LineaDeMovimiento> movimientos(
-            @RequestParam(required = false) String producto,
+            @RequestParam(required = false) Long producto,
             @RequestParam(defaultValue = "" + MOVIMIENTOS_POR_DEFECTO) int limite) {
 
         var pagina = PageRequest.of(0, Math.clamp(limite, 1, MOVIMIENTOS_MAXIMO));
 
-        List<MovimientoDeInventario> encontrados = (producto == null || producto.isBlank())
+        List<MovimientoDeInventario> encontrados = producto == null
                 ? movimientos.buscarRecientes(pagina)
-                : movimientos.buscarPorProducto(producto.trim(), pagina);
+                : movimientos.buscarPorProducto(producto, pagina);
 
         return encontrados.stream().map(LineaDeMovimiento::de).toList();
     }

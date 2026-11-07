@@ -33,7 +33,7 @@ public class EventoController {
      * la quiere; quien la sirve, no.
      */
     public record EventoResumen(
-            String id,
+            Long id,
             String slug,
             String titulo,
             String sala,
@@ -60,7 +60,7 @@ public class EventoController {
     }
 
     public record TipoDeEntradaResumen(
-            String id,
+            Long id,
             String nombre,
             String descripcion,
             int precioCentimos,
@@ -93,7 +93,7 @@ public class EventoController {
 
     /** La ficha completa de una noche. */
     /** Un artista del cartel, en el orden en que se lee. */
-    public record ArtistaDelCartel(String id, String nombre, String genero, boolean cabezaDeCartel) {
+    public record ArtistaDelCartel(Long id, String nombre, String genero, boolean cabezaDeCartel) {
 
         static ArtistaDelCartel de(Actuacion a) {
             return new ArtistaDelCartel(
@@ -110,13 +110,13 @@ public class EventoController {
      * noche sin artistas, que es lo que pasaba antes de añadirlos.
      */
     public record EventoDetalle(
-            String id,
+            Long id,
             String slug,
             String titulo,
             String descripcion,
             String portada,
             String video,
-            String salaId,
+            Long salaId,
             String sala,
             int aforoDeSala,
             Instant puertasA,

@@ -3,8 +3,9 @@ package pe.ssiomama.backend.eventos;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Table;
-import java.util.UUID;
 
 /** DJ o grupo que toca una noche — tabla {@code "Artist"}. */
 @Entity
@@ -12,8 +13,9 @@ import java.util.UUID;
 public class Artista {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    private String id;
+    private Long id;
 
     @Column(name = "nombre", nullable = false)
     private String nombre;
@@ -37,7 +39,6 @@ public class Artista {
     /** Un artista nuevo en el catálogo, todavía sin foto. */
     static Artista crear(String nombre, String genero, String instagram, String bio) {
         Artista a = new Artista();
-        a.id = UUID.randomUUID().toString();
         a.actualizar(nombre, genero, instagram, bio);
         return a;
     }
@@ -58,7 +59,7 @@ public class Artista {
         return valor == null || valor.isBlank() ? null : valor.trim();
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 

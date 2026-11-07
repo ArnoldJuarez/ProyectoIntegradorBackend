@@ -51,7 +51,7 @@ public class PersonalController {
             @Email(message = "El correo no es válido") @Size(max = 160) String email,
             @NotNull(message = "Elige el rol") Rol rol,
             boolean activo,
-            String puestoId,
+            Long puestoId,
             @Min(value = 0, message = "El sueldo no puede ser negativo") @Max(value = 1_000_000) int sueldoPorHoraCentimos,
             @Size(max = 20) String codigoDePromotor,
             Integer comisionPorcentaje,
@@ -66,13 +66,13 @@ public class PersonalController {
             String clave) {}
 
     public record PersonaEnLista(
-            String id,
+            Long id,
             String nombre,
             String email,
             Rol rol,
             boolean activo,
             boolean conAcceso,
-            String puestoId,
+            Long puestoId,
             String puesto,
             LocalDate fechaDeAlta,
             int sueldoPorHoraCentimos,
@@ -89,7 +89,7 @@ public class PersonalController {
         }
     }
 
-    public record PuestoParaElegir(String id, String nombre) {}
+    public record PuestoParaElegir(Long id, String nombre) {}
 
     public record OpcionesDePersonal(List<Rol> roles, List<PuestoParaElegir> puestos) {}
 
@@ -123,13 +123,13 @@ public class PersonalController {
     @PutMapping("/{id}")
     @Transactional
     public PersonaEnLista editar(
-            @PathVariable String id, @Valid @RequestBody FormularioDePersona f, @AuthenticationPrincipal Usuario quien) {
+            @PathVariable Long id, @Valid @RequestBody FormularioDePersona f, @AuthenticationPrincipal Usuario quien) {
         return PersonaEnLista.de(gestion.editar(id, aDatos(f, f.activo()), quien));
     }
 
     @PutMapping("/{id}/clave")
     @Transactional
-    public ResponseEntity<Void> cambiarClave(@PathVariable String id, @Valid @RequestBody NuevaClave n) {
+    public ResponseEntity<Void> cambiarClave(@PathVariable Long id, @Valid @RequestBody NuevaClave n) {
         gestion.cambiarClave(id, n.clave());
         return ResponseEntity.noContent().build();
     }

@@ -36,7 +36,7 @@ public class GestionDeGastos {
      * @param eventoSlug la noche a la que va, o nulo si es un gasto general
      */
     public record DatosDeGasto(
-            String categoriaId, String eventoSlug, int importeCentimos, String descripcion, Instant fecha) {}
+            Long categoriaId, String eventoSlug, int importeCentimos, String descripcion, Instant fecha) {}
 
     @Transactional
     public Gasto apuntar(DatosDeGasto d, Usuario quien) {
@@ -47,7 +47,7 @@ public class GestionDeGastos {
     }
 
     @Transactional
-    public Gasto corregir(String id, DatosDeGasto d) {
+    public Gasto corregir(Long id, DatosDeGasto d) {
         comprobar(d);
         Gasto g = gastos.findById(id).orElseThrow(() -> new GastoRechazado("Ese gasto no existe."));
         g.cambiar(categoria(d.categoriaId()), noche(d.eventoSlug()), d.importeCentimos(), d.descripcion(),
@@ -56,7 +56,7 @@ public class GestionDeGastos {
     }
 
     @Transactional
-    public void borrar(String id) {
+    public void borrar(Long id) {
         Gasto g = gastos.findById(id).orElseThrow(() -> new GastoRechazado("Ese gasto no existe."));
         gastos.delete(g);
     }
@@ -78,8 +78,8 @@ public class GestionDeGastos {
         }
     }
 
-    private CategoriaDeGasto categoria(String id) {
-        return categorias.findById(id == null ? "" : id)
+    private CategoriaDeGasto categoria(Long id) {
+        return (id == null ? java.util.Optional.<CategoriaDeGasto>empty() : categorias.findById(id))
                 .orElseThrow(() -> new GastoRechazado("Esa categoría no existe."));
     }
 

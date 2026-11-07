@@ -95,12 +95,12 @@ public class Conserje {
     /** Un turno de la conversación, como lo manda el navegador. */
     public record Turno(String rol, String contenido) {}
 
-    public record Respuesta(String ejecucionId, String texto) {}
+    public record Respuesta(Long ejecucionId, String texto) {}
 
     /** Contesta al último mensaje del historial. */
     public Respuesta preguntar(List<Turno> historial) {
         Motor motor = motores.prosa();
-        String ejecucion = registro.abrirEjecucion(
+        Long ejecucion = registro.abrirEjecucion(
                 ClaveDeAgente.CONSERJE, Disparador.CHAT, null, Map.of("history", historial), motor.modelo());
 
         try {

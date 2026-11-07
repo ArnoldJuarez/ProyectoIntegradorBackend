@@ -92,7 +92,7 @@ public class Crm {
 
     /** Un segmento concreto con su gente. */
     @Transactional(readOnly = true)
-    public Optional<SegmentoEvaluado> evaluar(String segmentoId, Instant ahora) {
+    public Optional<SegmentoEvaluado> evaluar(Long segmentoId, Instant ahora) {
         return segmentos.findById(segmentoId)
                 .map(segmento -> evaluar(segmento, clientes.findAll(), ahora));
     }
@@ -151,7 +151,7 @@ public class Crm {
     public Campania redactar(
             String nombre,
             CanalDeCampania canal,
-            String segmentoId,
+            Long segmentoId,
             String asunto,
             String cuerpo) {
 
@@ -171,7 +171,7 @@ public class Crm {
     /** Cambia el texto de una campaña que todavía no ha salido. */
     @Transactional
     public Campania reescribir(
-            String campaniaId, String nombre, CanalDeCampania canal, String asunto, String cuerpo) {
+            Long campaniaId, String nombre, CanalDeCampania canal, String asunto, String cuerpo) {
 
         Campania campania = campanias.buscarConSegmento(campaniaId)
                 .orElseThrow(() -> new CrmRechazado("Esa campaña no existe."));
@@ -197,7 +197,7 @@ public class Crm {
      * pregunta cuando alguien revisa por qué no salió una promoción.
      */
     @Transactional
-    public Campania cancelar(String campaniaId) {
+    public Campania cancelar(Long campaniaId) {
         Campania campania = campanias.buscarConSegmento(campaniaId)
                 .orElseThrow(() -> new CrmRechazado("Esa campaña no existe."));
 

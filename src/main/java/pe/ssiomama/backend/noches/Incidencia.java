@@ -6,11 +6,12 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
-import java.util.UUID;
 import pe.ssiomama.backend.auth.Usuario;
 import pe.ssiomama.backend.eventos.Evento;
 
@@ -27,8 +28,9 @@ import pe.ssiomama.backend.eventos.Evento;
 public class Incidencia {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    private String id;
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "eventoId", nullable = false)
@@ -59,7 +61,6 @@ public class Incidencia {
     static Incidencia apuntar(
             Evento evento, TipoDeIncidencia tipo, String descripcion, Instant ocurrioEn, Usuario quien) {
         Incidencia i = new Incidencia();
-        i.id = UUID.randomUUID().toString();
         i.evento = evento;
         i.tipo = tipo;
         i.descripcion = descripcion.trim();
@@ -69,7 +70,7 @@ public class Incidencia {
         return i;
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 

@@ -46,7 +46,7 @@ public class CrmController {
             @NotBlank(message = "Falta el nombre de la campaña")
             @Size(max = 120, message = "Ese nombre es demasiado largo") String nombre,
             @NotNull(message = "Elige un canal") CanalDeCampania canal,
-            @NotBlank(message = "Elige un segmento") String segmentoId,
+            @NotNull(message = "Elige un segmento") Long segmentoId,
             @Size(max = 200, message = "El asunto es demasiado largo") String asunto,
             @NotBlank(message = "La campaña no puede ir vacía")
             @Size(max = 4000, message = "El texto es demasiado largo") String cuerpo) {}
@@ -63,7 +63,7 @@ public class CrmController {
      *     que no existe.
      */
     public record SegmentoEnLista(
-            String id,
+            Long id,
             String nombre,
             String descripcion,
             String regla,
@@ -95,7 +95,7 @@ public class CrmController {
      * del panel, como el resto de la sección de clientes.
      */
     public record MiembroDeSegmento(
-            String id,
+            Long id,
             String nombre,
             String email,
             boolean aceptaMarketing,
@@ -118,12 +118,12 @@ public class CrmController {
     public record FichaDeSegmento(SegmentoEnLista segmento, List<MiembroDeSegmento> miembros) {}
 
     public record CampaniaEnLista(
-            String id,
+            Long id,
             String nombre,
             CanalDeCampania canal,
             String canalEtiqueta,
             String segmento,
-            String segmentoId,
+            Long segmentoId,
             String asunto,
             String cuerpo,
             EstadoDeCampania estado,
@@ -168,7 +168,7 @@ public class CrmController {
     /** Un segmento con la lista de quién cae dentro ahora mismo. */
     @GetMapping("/segmentos/{id}")
     @Transactional(readOnly = true)
-    public FichaDeSegmento segmento(@PathVariable String id) {
+    public FichaDeSegmento segmento(@PathVariable Long id) {
         var evaluado = crm.evaluar(id, Instant.now())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Ese segmento no existe."));
@@ -208,7 +208,7 @@ public class CrmController {
     @PutMapping("/campanias/{id}")
     @Transactional
     public CampaniaEnLista reescribir(
-            @PathVariable String id, @Valid @RequestBody FormularioDeCampania formulario) {
+            @PathVariable Long id, @Valid @RequestBody FormularioDeCampania formulario) {
 
         return CampaniaEnLista.de(crm.reescribir(
                 id,
@@ -221,7 +221,7 @@ public class CrmController {
     /** Descarta una campaña. Se marca como cancelada, no se borra. */
     @DeleteMapping("/campanias/{id}")
     @Transactional
-    public CampaniaEnLista cancelar(@PathVariable String id) {
+    public CampaniaEnLista cancelar(@PathVariable Long id) {
         return CampaniaEnLista.de(crm.cancelar(id));
     }
 }

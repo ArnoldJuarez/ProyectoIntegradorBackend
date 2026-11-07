@@ -86,7 +86,7 @@ public class GestionDeEventos {
     public record DatosDeNoche(
             String titulo,
             String descripcion,
-            String salaId,
+            Long salaId,
             Instant puertasA,
             Instant terminaA,
             int edadMinima,
@@ -94,20 +94,20 @@ public class GestionDeEventos {
             EstadoDeEvento estado,
             String portada,
             String video,
-            List<String> artistaIds) {
+            List<Long> artistaIds) {
 
         /** Una noche sin video, que es lo normal. */
         public DatosDeNoche(
                 String titulo,
                 String descripcion,
-                String salaId,
+                Long salaId,
                 Instant puertasA,
                 Instant terminaA,
                 int edadMinima,
                 String vestimenta,
                 EstadoDeEvento estado,
                 String portada,
-                List<String> artistaIds) {
+                List<Long> artistaIds) {
             this(titulo, descripcion, salaId, puertasA, terminaA, edadMinima, vestimenta, estado, portada,
                     null, artistaIds);
         }
@@ -308,7 +308,7 @@ public class GestionDeEventos {
 
     /** Cambia un tipo de entrada que ya existe. */
     @Transactional
-    public TipoDeEntrada editarTipo(String tipoId, DatosDeTipo datos) {
+    public TipoDeEntrada editarTipo(Long tipoId, DatosDeTipo datos) {
         TipoDeEntrada tipo = tipos.buscarConEvento(tipoId)
                 .orElseThrow(() -> new EventoRechazado("Ese tipo de entrada no existe."));
 
@@ -347,7 +347,7 @@ public class GestionDeEventos {
      * @return cierto si se retiró en vez de borrarse
      */
     @Transactional
-    public boolean quitarTipo(String tipoId) {
+    public boolean quitarTipo(Long tipoId) {
         TipoDeEntrada tipo = tipos.findById(tipoId)
                 .orElseThrow(() -> new EventoRechazado("Ese tipo de entrada no existe."));
 
@@ -401,7 +401,7 @@ public class GestionDeEventos {
      * @param anadir cuántas entradas suma la operación en curso
      */
     private void comprobarAforo(
-            Sala sala, List<TipoDeEntrada> existentes, String excluir, int anadir) {
+            Sala sala, List<TipoDeEntrada> existentes, Long excluir, int anadir) {
 
         int yaOfertadas = existentes.stream()
                 .filter(t -> excluir == null || !t.getId().equals(excluir))
@@ -442,12 +442,12 @@ public class GestionDeEventos {
      * formulario —se arrastra al de arriba— y no una casilla aparte, porque en
      * la práctica el orden y la jerarquía son la misma decisión.
      */
-    private void montarElCartel(Evento noche, List<String> artistaIds) {
+    private void montarElCartel(Evento noche, List<Long> artistaIds) {
         if (artistaIds == null || artistaIds.isEmpty()) {
             return;
         }
 
-        List<String> sinRepetir = artistaIds.stream().distinct().toList();
+        List<Long> sinRepetir = artistaIds.stream().distinct().toList();
 
         for (int i = 0; i < sinRepetir.size(); i++) {
             Artista artista = artistas.findById(sinRepetir.get(i))

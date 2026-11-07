@@ -36,8 +36,8 @@ class GastosTest {
     @Autowired
     private EntityManager em;
 
-    private String categoria(String nombre) {
-        return jdbc.queryForObject("select id from \"CategoriaGasto\" where nombre = ?", String.class, nombre);
+    private Long categoria(String nombre) {
+        return jdbc.queryForObject("select id from \"CategoriaGasto\" where nombre = ?", Long.class, nombre);
     }
 
     @Test

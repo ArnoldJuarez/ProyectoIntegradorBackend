@@ -52,13 +52,13 @@ class GestionDeEventosTest {
 
     // ── Apoyo ─────────────────────────────────────────────────────
 
-    private String salaPrincipal() {
+    private Long salaPrincipal() {
         return salas.findAllByOrderByAforoDesc().getFirst().getId();
     }
 
-    private List<String> dosArtistas() {
+    private List<Long> dosArtistas() {
         return jdbc.queryForList(
-                "select id from \"Artista\" order by nombre limit 2", String.class);
+                "select id from \"Artista\" order by nombre limit 2", Long.class);
     }
 
     /** Un horario válido cualquiera, en el futuro. */
@@ -409,12 +409,12 @@ class GestionDeEventosTest {
     @Test
     @DisplayName("el cupo no baja por debajo de lo ya vendido")
     void cupoPorDebajoDeLoVendido() {
-        String tipoId = jdbc.queryForObject(
+        Long tipoId = jdbc.queryForObject(
                 """
                 select t.id from "TipoEntrada" t join "Evento" v on v.id = t."eventoId"
                 where v.slug = ? and t.vendidas > 0 order by t.vendidas desc limit 1
                 """,
-                String.class,
+                Long.class,
                 CON_ENTRADAS);
 
         int vendidas = tipos.findById(tipoId).orElseThrow().getVendidas();
@@ -449,7 +449,7 @@ class GestionDeEventosTest {
         var creada = gestion.crear(noche("Noche con Tipo Borrable"));
         comoUnaPeticionNueva();
         var tipo = gestion.anadirTipo(creada.getSlug(), tipo("Se Borra", 50));
-        String tipoId = tipo.getId();
+        Long tipoId = tipo.getId();
         comoUnaPeticionNueva();
 
         boolean retirado = gestion.quitarTipo(tipoId);
@@ -466,12 +466,12 @@ class GestionDeEventosTest {
     @Test
     @DisplayName("un tipo con ventas se retira, no se borra")
     void retirarTipoConVentas() {
-        String tipoId = jdbc.queryForObject(
+        Long tipoId = jdbc.queryForObject(
                 """
                 select t.id from "TipoEntrada" t join "Evento" v on v.id = t."eventoId"
                 where v.slug = ? and t.vendidas > 0 limit 1
                 """,
-                String.class,
+                Long.class,
                 CON_ENTRADAS);
 
         boolean retirado = gestion.quitarTipo(tipoId);
@@ -490,7 +490,7 @@ class GestionDeEventosTest {
     void salaInventada() {
         var d = noche("Noche sin Sala");
         assertThatThrownBy(() -> gestion.crear(new DatosDeNoche(
-                        d.titulo(), d.descripcion(), "no-existe", d.puertasA(), d.terminaA(),
+                        d.titulo(), d.descripcion(), 999_999_999L, d.puertasA(), d.terminaA(),
                         d.edadMinima(), d.vestimenta(), d.estado(), null, List.of())))
                 .isInstanceOf(EventoRechazado.class)
                 .hasMessageContaining("sala no existe");

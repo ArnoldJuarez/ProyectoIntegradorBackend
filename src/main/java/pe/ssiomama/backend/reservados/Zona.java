@@ -5,6 +5,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -25,8 +27,9 @@ import org.hibernate.type.SqlTypes;
 public class Zona {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    private String id;
+    private Long id;
 
     @Column(name = "nombre", nullable = false)
     private String nombre;
@@ -43,7 +46,7 @@ public class Zona {
 
     /** Solo lectura: las zonas no cambian de sala desde la aplicación. */
     @Column(name = "salaId", nullable = false, insertable = false, updatable = false)
-    private String salaId;
+    private Long salaId;
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
@@ -79,7 +82,7 @@ public class Zona {
         // Hibernate necesita un constructor sin argumentos.
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 
@@ -95,7 +98,7 @@ public class Zona {
         return orden;
     }
 
-    public String getSalaId() {
+    public Long getSalaId() {
         return salaId;
     }
 

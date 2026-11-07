@@ -27,7 +27,7 @@ class GestionDeReservasTest {
     private EntityManager em;
 
     /** Una noche publicada y futura y un box que nadie ha pedido para ella. */
-    private record Hueco(String slug, String mesaId, int plazas) {}
+    private record Hueco(String slug, Long mesaId, int plazas) {}
 
     private Hueco hueco() {
         return jdbc.queryForObject("""
@@ -35,7 +35,7 @@ class GestionDeReservasTest {
                 where e.estado = 'PUBLICADO' and e."empiezaEn" > now() at time zone 'utc' and b.activo
                   and not exists (select 1 from "ReservaBox" r where r."eventoId" = e.id and r."boxId" = b.id)
                 order by e."empiezaEn", b.plazas limit 1
-                """, (rs, n) -> new Hueco(rs.getString(1), rs.getString(2), rs.getInt(3)));
+                """, (rs, n) -> new Hueco(rs.getString(1), rs.getLong(2), rs.getInt(3)));
     }
 
     private Reserva pedir(Hueco h, String email) {

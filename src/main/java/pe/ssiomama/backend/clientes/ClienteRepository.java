@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface ClienteRepository extends JpaRepository<Cliente, String> {
+public interface ClienteRepository extends JpaRepository<Cliente, Long> {
 
     /**
      * Por correo, ignorando mayúsculas.

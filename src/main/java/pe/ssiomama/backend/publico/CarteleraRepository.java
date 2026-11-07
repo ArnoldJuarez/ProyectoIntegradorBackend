@@ -30,7 +30,7 @@ import pe.ssiomama.backend.eventos.Evento;
  * <b>mismas instancias</b> que ya trajo la primera, porque viven en el contexto
  * de persistencia. Sigue siendo un número fijo de consultas, no una por noche.
  */
-public interface CarteleraRepository extends JpaRepository<Evento, String> {
+public interface CarteleraRepository extends JpaRepository<Evento, Long> {
 
     /**
      * Las noches que todavía no han terminado, de la más cercana en adelante.

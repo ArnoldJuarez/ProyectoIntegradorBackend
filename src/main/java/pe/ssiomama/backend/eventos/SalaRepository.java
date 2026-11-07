@@ -4,7 +4,7 @@ import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 /** Acceso a {@code "Sala"}. */
-public interface SalaRepository extends JpaRepository<Sala, String> {
+public interface SalaRepository extends JpaRepository<Sala, Long> {
 
     /**
      * Las salas de mayor a menor aforo.

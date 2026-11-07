@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.List;
-import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -36,8 +35,8 @@ class AprobarConCambiosHttpTest {
     private JdbcTemplate jdbc;
 
     private final ObjectMapper json = new ObjectMapper();
-    private String ejecucion;
-    private String propuesta;
+    private Long ejecucion;
+    private Long propuesta;
 
     @AfterEach
     void limpiar() {
@@ -69,8 +68,8 @@ class AprobarConCambiosHttpTest {
                    "artistas": [], "entradas": [{"nombre": "General", "descripcion": "", "precioCentimos": 2500,
                    "cantidad": 100, "maximoPorPedido": 6}], "motivo": "Porque sí."}]}
                 """);
-        ejecucion = UUID.randomUUID().toString();
-        propuesta = UUID.randomUUID().toString();
+        ejecucion = pe.ssiomama.backend.NocheDePrueba.reservarId(jdbc, "EjecucionAgente");
+        propuesta = pe.ssiomama.backend.NocheDePrueba.reservarId(jdbc, "PropuestaAgente");
         jdbc.update("""
                 insert into "EjecucionAgente" (id, "claveAgente", disparador, estado, salida, "iniciadaEn")
                 values (?, 'programmer', 'manual', 'COMPLETADA', cast(? as jsonb), now() at time zone 'utc')

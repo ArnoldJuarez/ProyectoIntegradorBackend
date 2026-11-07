@@ -4,12 +4,13 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
-import java.util.UUID;
 import pe.ssiomama.backend.auth.Usuario;
 import pe.ssiomama.backend.eventos.Evento;
 import pe.ssiomama.backend.eventos.Puerta;
@@ -32,8 +33,9 @@ import pe.ssiomama.backend.eventos.Puerta;
 public class Escaneo {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    private String id;
+    private Long id;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "entradaId", nullable = false, unique = true)
@@ -66,17 +68,13 @@ public class Escaneo {
     /**
      * Registra el paso de una entrada por la puerta.
      *
-     * <p>El id se genera aquí y no lo pone la base porque la columna es
-     * {@code text} sin valor por defecto: el esquema viene de Prisma, que
-     * generaba los identificadores en la aplicación. Cambiarlo ahora obligaría a
-     * tocar las 38 tablas.
+     * <p>El id lo pone la base al insertar (columna identity).
      *
      * @param puerta por dónde pasó, o {@code null} si la sala no tiene ninguna
      */
     public static Escaneo registrar(
             Entrada entrada, Usuario portero, Puerta puerta, Instant cuando) {
         Escaneo e = new Escaneo();
-        e.id = UUID.randomUUID().toString();
         e.entrada = entrada;
         e.evento = entrada.getEvento();
         e.escaneadoPor = portero;
@@ -85,7 +83,7 @@ public class Escaneo {
         return e;
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 

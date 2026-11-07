@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.server.ResponseStatusException;
 import pe.ssiomama.backend.auth.PersonalRechazado;
 import pe.ssiomama.backend.caja.CajaRechazada;
@@ -56,6 +57,23 @@ public class ManejadorDeErrores {
         String motivo = e.getReason();
         return ResponseEntity.status(e.getStatusCode())
                 .body(new Problema(motivo == null || motivo.isBlank() ? "No se pudo." : motivo));
+    }
+
+    /**
+     * Un id que no es un número en la ruta ({@code /api/clientes/abc}).
+     *
+     * <p>Los ids son enteros: uno que no lo es no puede existir, así que la
+     * respuesta es la misma que para un número que no está en la base, 404, y
+     * no un 400 genérico. Es también lo que recibe quien guardó un enlace de
+     * cuando los ids eran texto.
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Problema> deIdQueNoEsNumero(MethodArgumentTypeMismatchException e) {
+        Class<?> esperado = e.getRequiredType();
+        if (esperado == Long.class || esperado == long.class) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new Problema("No existe."));
+        }
+        return ResponseEntity.badRequest().body(new Problema("Hay un dato con un formato que no se entiende."));
     }
 
     /**

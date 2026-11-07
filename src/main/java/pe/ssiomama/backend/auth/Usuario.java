@@ -6,6 +6,8 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -36,8 +38,9 @@ import pe.ssiomama.backend.personal.Puesto;
 public class Usuario {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    private String id;
+    private Long id;
 
     /** Opcional: hay personal sin cuenta de acceso. */
     @Column(name = "correo", unique = true)
@@ -111,7 +114,6 @@ public class Usuario {
     /** Alguien nuevo en el equipo, activo desde hoy. Sin correo ni clave no podrá entrar al sistema. */
     static Usuario alta(String nombre, Rol rol, LocalDate fechaDeAlta) {
         Usuario u = new Usuario();
-        u.id = java.util.UUID.randomUUID().toString();
         u.nombre = nombre.trim();
         u.rol = rol;
         u.activo = true;
@@ -161,7 +163,7 @@ public class Usuario {
         return codigoDePromotor != null && !codigoDePromotor.isBlank();
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 

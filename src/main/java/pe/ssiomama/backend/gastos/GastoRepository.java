@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 /** Acceso a {@code "Gasto"}. */
-public interface GastoRepository extends JpaRepository<Gasto, String> {
+public interface GastoRepository extends JpaRepository<Gasto, Long> {
 
     /** Los gastos entre dos instantes, con todo lo que se enseña, el más reciente primero. */
     @Query("""

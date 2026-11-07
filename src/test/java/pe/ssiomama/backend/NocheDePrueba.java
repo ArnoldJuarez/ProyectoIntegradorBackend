@@ -47,12 +47,21 @@ public final class NocheDePrueba {
      *
      * @return el id del evento creado
      */
-    public static String crear(JdbcTemplate jdbc, String titulo) {
-        String id = UUID.randomUUID().toString();
+    /**
+     * Reserva el próximo id de una tabla sin insertar nada: la misma secuencia
+     * que usa su columna identity, así que no choca con nadie.
+     */
+    public static Long reservarId(JdbcTemplate jdbc, String tabla) {
+        return jdbc.queryForObject(
+                "select nextval(pg_get_serial_sequence(?, 'id'))", Long.class, "public.\"" + tabla + "\"");
+    }
+
+    public static Long crear(JdbcTemplate jdbc, String titulo) {
+        Long id = reservarId(jdbc, "Evento");
         String slug = PREFIJO + UUID.randomUUID().toString().substring(0, 8);
 
-        String salaId = jdbc.queryForObject(
-                "select id from \"Sala\" order by aforo desc limit 1", String.class);
+        Long salaId = jdbc.queryForObject(
+                "select id from \"Sala\" order by aforo desc limit 1", Long.class);
 
         jdbc.update(
                 """
@@ -75,7 +84,7 @@ public final class NocheDePrueba {
     }
 
     /** El slug de una noche creada aquí, para las rutas públicas. */
-    public static String slugDe(JdbcTemplate jdbc, String eventoId) {
+    public static String slugDe(JdbcTemplate jdbc, Long eventoId) {
         return jdbc.queryForObject(
                 "select slug from \"Evento\" where id = ?", String.class, eventoId);
     }
@@ -85,10 +94,10 @@ public final class NocheDePrueba {
      *
      * @return el id del tipo creado
      */
-    public static String anadirTipoDeEntrada(
-            JdbcTemplate jdbc, String eventoId, String nombre, int precioCentimos, int cantidad) {
+    public static Long anadirTipoDeEntrada(
+            JdbcTemplate jdbc, Long eventoId, String nombre, int precioCentimos, int cantidad) {
 
-        String id = UUID.randomUUID().toString();
+        Long id = reservarId(jdbc, "TipoEntrada");
 
         jdbc.update(
                 """

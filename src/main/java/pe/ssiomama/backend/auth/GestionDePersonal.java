@@ -46,7 +46,7 @@ public class GestionDePersonal {
             String email,
             Rol rol,
             boolean activo,
-            String puestoId,
+            Long puestoId,
             int sueldoPorHoraCentimos,
             String codigoDePromotor,
             Integer comisionPorcentaje,
@@ -54,7 +54,7 @@ public class GestionDePersonal {
             Integer bonoPorInvitadoCentimos) {
 
         /** Sin bono: el que ya tuviera se conserva. */
-        public DatosDePersona(String nombre, String email, Rol rol, boolean activo, String puestoId,
+        public DatosDePersona(String nombre, String email, Rol rol, boolean activo, Long puestoId,
                 int sueldoPorHoraCentimos, String codigoDePromotor, Integer comisionPorcentaje) {
             this(nombre, email, rol, activo, puestoId, sueldoPorHoraCentimos, codigoDePromotor, comisionPorcentaje, null);
         }
@@ -72,7 +72,7 @@ public class GestionDePersonal {
     }
 
     @Transactional
-    public Usuario editar(String id, DatosDePersona d, Usuario quien) {
+    public Usuario editar(Long id, DatosDePersona d, Usuario quien) {
         Usuario u = persona(id);
         if (u.getId().equals(quien.getId())) {
             if (!d.activo()) throw new PersonalRechazado("No puedes desactivarte a ti mismo.");
@@ -85,7 +85,7 @@ public class GestionDePersonal {
     }
 
     @Transactional
-    public void cambiarClave(String id, String clave) {
+    public void cambiarClave(Long id, String clave) {
         Usuario u = persona(id);
         if (u.getEmail() == null) {
             throw new PersonalRechazado("Ponle antes un correo: sin correo no hay con qué iniciar sesión.");
@@ -122,7 +122,7 @@ public class GestionDePersonal {
         if (d.sueldoPorHoraCentimos() < 0) {
             throw new PersonalRechazado("El sueldo por hora no puede ser negativo.");
         }
-        Puesto puesto = d.puestoId() == null || d.puestoId().isBlank()
+        Puesto puesto = d.puestoId() == null
                 ? null
                 : puestos.findById(d.puestoId()).orElseThrow(() -> new PersonalRechazado("Ese puesto no existe."));
 
@@ -144,7 +144,7 @@ public class GestionDePersonal {
         u.cambiarHashDeContrasena(codificador.encode(clave));
     }
 
-    private Usuario persona(String id) {
+    private Usuario persona(Long id) {
         return usuarios.findById(id).orElseThrow(() -> new PersonalRechazado("Esa persona no existe."));
     }
 }

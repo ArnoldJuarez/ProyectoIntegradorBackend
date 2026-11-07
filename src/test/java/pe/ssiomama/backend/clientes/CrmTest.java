@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import jakarta.persistence.EntityManager;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.UUID;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,8 +55,8 @@ class CrmTest {
     }
 
     /** Crea un segmento con la regla que se le pase, para probar casos concretos. */
-    private String segmentoCon(String nombre, String reglaJson) {
-        String id = UUID.randomUUID().toString();
+    private Long segmentoCon(String nombre, String reglaJson) {
+        Long id = pe.ssiomama.backend.NocheDePrueba.reservarId(jdbc, "Segmento");
         jdbc.update(
                 """
                 insert into "Segmento" (id, nombre, descripcion, "reglasJson", "esDinamico", "actualizadoEn")
@@ -143,7 +142,7 @@ class CrmTest {
     @Test
     @DisplayName("la misma regla da distinto segun cuando se evalue")
     void seRecalculaSolo() {
-        String id = segmentoCon("Dormidos de prueba", "{\"type\":\"inactive\",\"daysSinceLastVisit\":30}");
+        Long id = segmentoCon("Dormidos de prueba", "{\"type\":\"inactive\",\"daysSinceLastVisit\":30}");
         comoUnaPeticionNueva();
 
         Instant hoy = Instant.now();
@@ -178,7 +177,7 @@ class CrmTest {
     @Test
     @DisplayName("un segmento con la regla rota sale vacio, no revienta")
     void reglaRota() {
-        String id = segmentoCon("Regla inventada", "{\"type\":\"loQueSea\"}");
+        Long id = segmentoCon("Regla inventada", "{\"type\":\"loQueSea\"}");
         comoUnaPeticionNueva();
 
         var evaluado = crm.evaluar(id, Instant.now()).orElseThrow();
@@ -190,7 +189,7 @@ class CrmTest {
     @Test
     @DisplayName("un json que ni siquiera es una regla tampoco revienta")
     void jsonBasura() {
-        String id = segmentoCon("Json raro", "{\"nada\":\"que ver\"}");
+        Long id = segmentoCon("Json raro", "{\"nada\":\"que ver\"}");
         comoUnaPeticionNueva();
 
         assertThat(crm.evaluar(id, Instant.now()).orElseThrow().miembros()).isEmpty();
@@ -225,7 +224,7 @@ class CrmTest {
     @Test
     @DisplayName("una campana por correo necesita asunto")
     void correoSinAsunto() {
-        String vip = porNombre("VIP").getId();
+        Long vip = porNombre("VIP").getId();
 
         assertThatThrownBy(() -> crm.redactar(
                         "Sin asunto", CanalDeCampania.CORREO, vip, "  ", "El cuerpo sí está."))
@@ -236,7 +235,7 @@ class CrmTest {
     @Test
     @DisplayName("por whatsapp no hace falta asunto")
     void whatsappSinAsunto() {
-        String vip = porNombre("VIP").getId();
+        Long vip = porNombre("VIP").getId();
 
         var campania = crm.redactar(
                 "Aviso rápido", CanalDeCampania.WHATSAPP, vip, null, "Este viernes abrimos a las 8.");
@@ -248,7 +247,7 @@ class CrmTest {
     @Test
     @DisplayName("una campana en borrador se puede reescribir")
     void reescribir() {
-        String vip = porNombre("VIP").getId();
+        Long vip = porNombre("VIP").getId();
         var campania = crm.redactar(
                 "Primera versión", CanalDeCampania.CORREO, vip, "Asunto viejo", "Texto viejo.");
         comoUnaPeticionNueva();
@@ -272,10 +271,10 @@ class CrmTest {
     @Test
     @DisplayName("cancelar no borra: marca")
     void cancelar() {
-        String vip = porNombre("VIP").getId();
+        Long vip = porNombre("VIP").getId();
         var campania = crm.redactar(
                 "Se cancela", CanalDeCampania.CORREO, vip, "Asunto", "Texto.");
-        String id = campania.getId();
+        Long id = campania.getId();
         comoUnaPeticionNueva();
 
         var cancelada = crm.cancelar(id);
@@ -288,9 +287,9 @@ class CrmTest {
     @Test
     @DisplayName("una campana cancelada ya no se toca")
     void canceladaNoSeToca() {
-        String vip = porNombre("VIP").getId();
+        Long vip = porNombre("VIP").getId();
         var campania = crm.redactar("Se cancela", CanalDeCampania.CORREO, vip, "A", "B");
-        String id = campania.getId();
+        Long id = campania.getId();
         comoUnaPeticionNueva();
 
         crm.cancelar(id);
@@ -309,7 +308,7 @@ class CrmTest {
     @DisplayName("un segmento que no existe se rechaza con su mensaje")
     void segmentoInventado() {
         assertThatThrownBy(() -> crm.redactar(
-                        "Al aire", CanalDeCampania.CORREO, "no-existe", "A", "B"))
+                        "Al aire", CanalDeCampania.CORREO, 999_999_999L, "A", "B"))
                 .isInstanceOf(CrmRechazado.class)
                 .hasMessageContaining("segmento no existe");
     }
@@ -317,7 +316,7 @@ class CrmTest {
     @Test
     @DisplayName("el listado trae las campanas con su segmento cargado")
     void listar() {
-        String vip = porNombre("VIP").getId();
+        Long vip = porNombre("VIP").getId();
         crm.redactar("Una campaña", CanalDeCampania.CORREO, vip, "Asunto", "Texto.");
         comoUnaPeticionNueva();
 

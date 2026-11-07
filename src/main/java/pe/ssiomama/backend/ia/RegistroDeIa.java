@@ -10,7 +10,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
@@ -50,27 +49,26 @@ public class RegistroDeIa {
 
     // ── Ejecuciones ───────────────────────────────────────────────
 
-    public String abrirEjecucion(
-            ClaveDeAgente clave, Disparador disparador, String lanzadoPorId, Object entrada, String modelo) {
-        String id = UUID.randomUUID().toString();
-        sql.sql("""
+    public Long abrirEjecucion(
+            ClaveDeAgente clave, Disparador disparador, Long lanzadoPorId, Object entrada, String modelo) {
+        return sql.sql("""
                 insert into "EjecucionAgente"
-                  (id, "claveAgente", disparador, "lanzadoPorId", entrada, estado, modelo, "iniciadaEn")
-                values (:id, cast(:clave as "ClaveAgente"), cast(:disparador as "DisparadorAgente"),
+                  ("claveAgente", disparador, "lanzadoPorId", entrada, estado, modelo, "iniciadaEn")
+                values (cast(:clave as "ClaveAgente"), cast(:disparador as "DisparadorAgente"),
                         :lanzadoPor, cast(:entrada as jsonb), 'EJECUTANDO', :modelo, %s)
+                returning id
                 """.formatted(AHORA))
-                .param("id", id)
                 .param("clave", clave.etiqueta())
                 .param("disparador", disparador.etiqueta())
                 .param("lanzadoPor", lanzadoPorId)
                 .param("entrada", aJson(entrada))
                 .param("modelo", modelo)
-                .update();
-        return id;
+                .query(Long.class)
+                .single();
     }
 
     public void completarEjecucion(
-            String id, Object salida, int tokensEntrada, int tokensSalida, int costeCentimos, int intentos) {
+            Long id, Object salida, int tokensEntrada, int tokensSalida, int costeCentimos, int intentos) {
         sql.sql("""
                 update "EjecucionAgente"
                 set estado = 'COMPLETADA', salida = cast(:salida as jsonb),
@@ -87,7 +85,7 @@ public class RegistroDeIa {
                 .update();
     }
 
-    public void fallarEjecucion(String id, String error) {
+    public void fallarEjecucion(Long id, String error) {
         sql.sql("""
                 update "EjecucionAgente"
                 set estado = 'FALLIDA', error = :error, "terminadaEn" = %s
@@ -100,24 +98,23 @@ public class RegistroDeIa {
 
     // ── Propuestas ────────────────────────────────────────────────
 
-    public String proponer(String ejecucionId, TipoDePropuesta tipo, JsonNode datos) {
-        String id = UUID.randomUUID().toString();
-        sql.sql("""
-                insert into "PropuestaAgente" (id, "ejecucionId", tipo, datos, estado, "creadoEn")
-                values (:id, :ejecucion, cast(:tipo as "TipoPropuesta"), cast(:datos as jsonb), 'PENDIENTE', %s)
+    public Long proponer(Long ejecucionId, TipoDePropuesta tipo, JsonNode datos) {
+        return sql.sql("""
+                insert into "PropuestaAgente" ("ejecucionId", tipo, datos, estado, "creadoEn")
+                values (:ejecucion, cast(:tipo as "TipoPropuesta"), cast(:datos as jsonb), 'PENDIENTE', %s)
+                returning id
                 """.formatted(AHORA))
-                .param("id", id)
                 .param("ejecucion", ejecucionId)
                 .param("tipo", tipo.name())
                 .param("datos", aJson(datos))
-                .update();
-        return id;
+                .query(Long.class)
+                .single();
     }
 
     /** Una propuesta tal como se pinta en la bandeja. */
     public record Propuesta(
-            String id,
-            String ejecucionId,
+            Long id,
+            Long ejecucionId,
             TipoDePropuesta tipo,
             String agente,
             String estado,
@@ -156,7 +153,7 @@ public class RegistroDeIa {
                 .list();
     }
 
-    public Optional<Propuesta> propuesta(String id) {
+    public Optional<Propuesta> propuesta(Long id) {
         return sql.sql(SELECT_PROPUESTA + " where p.id = :id")
                 .param("id", id)
                 .query((rs, n) -> propuesta(rs, n))
@@ -169,7 +166,7 @@ public class RegistroDeIa {
      * @return {@code false} si alguien la revisó antes: dos personas pulsando
      *     «Aprobar» a la vez no deben aplicarla dos veces
      */
-    public boolean revisar(String id, String estado, String revisorId) {
+    public boolean revisar(Long id, String estado, Long revisorId) {
         return sql.sql("""
                 update "PropuestaAgente"
                 set estado = cast(:estado as "EstadoPropuesta"), "revisadaPorId" = :revisor, "revisadaEn" = %s
@@ -188,14 +185,14 @@ public class RegistroDeIa {
      * ejecución ({@code EjecucionAgente.salida}). Así se puede comparar lo que
      * dijo la IA con lo que se aprobó de verdad.
      */
-    public void reemplazarDatos(String id, JsonNode datos) {
+    public void reemplazarDatos(Long id, JsonNode datos) {
         sql.sql("update \"PropuestaAgente\" set datos = cast(:datos as jsonb) where id = :id")
                 .param("id", id)
                 .param("datos", aJson(datos))
                 .update();
     }
 
-    public void marcarAplicada(String id) {
+    public void marcarAplicada(Long id) {
         sql.sql("update \"PropuestaAgente\" set \"aplicadaEn\" = %s where id = :id".formatted(AHORA))
                 .param("id", id)
                 .update();
@@ -203,8 +200,8 @@ public class RegistroDeIa {
 
     private Propuesta propuesta(ResultSet rs, int fila) throws SQLException {
         return new Propuesta(
-                rs.getString("id"),
-                rs.getString("ejecucionId"),
+                rs.getObject("id", Long.class),
+                rs.getObject("ejecucionId", Long.class),
                 TipoDePropuesta.valueOf(rs.getString("tipo")),
                 rs.getString("agente"),
                 rs.getString("estado"),
@@ -221,7 +218,7 @@ public class RegistroDeIa {
 
     /** Una ejecución, con lo justo para agregarla. */
     public record Ejecucion(
-            String id,
+            Long id,
             String agente,
             String disparador,
             String modelo,
@@ -246,7 +243,7 @@ public class RegistroDeIa {
                 order by e."iniciadaEn" desc
                 """)
                 .query((rs, n) -> new Ejecucion(
-                        rs.getString("id"),
+                        rs.getObject("id", Long.class),
                         rs.getString("agente"),
                         rs.getString("disparador"),
                         rs.getString("modelo"),
@@ -265,31 +262,29 @@ public class RegistroDeIa {
     // ── Chat ──────────────────────────────────────────────────────
 
     /** La sesión de chat, si existe; si no, una nueva. */
-    public String sesionDeChat(String sesionId) {
-        if (sesionId != null && !sesionId.isBlank()) {
+    public Long sesionDeChat(Long sesionId) {
+        if (sesionId != null) {
             boolean existe = sql.sql("select count(*) from \"SesionChat\" where id = :id")
                     .param("id", sesionId)
                     .query(Long.class)
                     .single() > 0;
             if (existe) return sesionId;
         }
-        String id = UUID.randomUUID().toString();
-        sql.sql("""
-                insert into "SesionChat" (id, canal, "iniciadaEn", "ultimoMensajeEn")
-                values (:id, 'WEB', %s, %s)
+        return sql.sql("""
+                insert into "SesionChat" (canal, "iniciadaEn", "ultimoMensajeEn")
+                values ('WEB', %s, %s)
+                returning id
                 """.formatted(AHORA, AHORA))
-                .param("id", id)
-                .update();
-        return id;
+                .query(Long.class)
+                .single();
     }
 
     /** @param rol {@code user} o {@code assistant}, como en la base */
-    public void guardarMensaje(String sesionId, String rol, String contenido, String ejecucionId) {
+    public void guardarMensaje(Long sesionId, String rol, String contenido, Long ejecucionId) {
         sql.sql("""
-                insert into "MensajeChat" (id, "sesionId", rol, contenido, "ejecucionId", "creadoEn")
-                values (:id, :sesion, cast(:rol as "RolChat"), :contenido, :ejecucion, %s)
+                insert into "MensajeChat" ("sesionId", rol, contenido, "ejecucionId", "creadoEn")
+                values (:sesion, cast(:rol as "RolChat"), :contenido, :ejecucion, %s)
                 """.formatted(AHORA))
-                .param("id", UUID.randomUUID().toString())
                 .param("sesion", sesionId)
                 .param("rol", rol)
                 .param("contenido", contenido)

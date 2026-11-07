@@ -28,9 +28,9 @@ class ListasTest {
                 """, String.class);
     }
 
-    private String promotor() {
+    private Long promotor() {
         return jdbc.queryForObject("select id from \"Usuario\" where \"codigoPromotor\" is not null order by nombre limit 1",
-                String.class);
+                Long.class);
     }
 
     @Test

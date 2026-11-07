@@ -100,7 +100,7 @@ public class MiPromotorController {
 
     @GetMapping("/listas/{id}")
     @Transactional(readOnly = true)
-    public FichaDeLista lista(@PathVariable String id, @AuthenticationPrincipal Usuario quien) {
+    public FichaDeLista lista(@PathVariable Long id, @AuthenticationPrincipal Usuario quien) {
         return FichaDeLista.de(suya(id, promotor(quien)));
     }
 
@@ -115,7 +115,7 @@ public class MiPromotorController {
     @PostMapping("/listas/{id}/invitados")
     @Transactional
     public ResponseEntity<InvitadoEnFicha> apuntar(
-            @PathVariable String id,
+            @PathVariable Long id,
             @Valid @RequestBody ListasController.NuevoInvitado n,
             @AuthenticationPrincipal Usuario quien) {
         suya(id, promotor(quien));
@@ -125,7 +125,7 @@ public class MiPromotorController {
 
     @DeleteMapping("/invitados/{id}")
     @Transactional
-    public ResponseEntity<Void> quitar(@PathVariable String id, @AuthenticationPrincipal Usuario quien) {
+    public ResponseEntity<Void> quitar(@PathVariable Long id, @AuthenticationPrincipal Usuario quien) {
         Usuario yo = promotor(quien);
         Invitado i = invitados.buscarConLista(id).orElseThrow(() -> new ListaRechazada("Esa fila no existe."));
         if (!i.getLista().getPromotor().getId().equals(yo.getId())) {
@@ -146,7 +146,7 @@ public class MiPromotorController {
     }
 
     /** La lista, si es de quien pregunta. Una ajena responde 404 y no 403: no se confirma que exista. */
-    private ListaDeInvitados suya(String id, Usuario yo) {
+    private ListaDeInvitados suya(Long id, Usuario yo) {
         return listas.buscarConInvitados(id)
                 .filter(l -> l.getPromotor().getId().equals(yo.getId()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Esa lista no existe."));

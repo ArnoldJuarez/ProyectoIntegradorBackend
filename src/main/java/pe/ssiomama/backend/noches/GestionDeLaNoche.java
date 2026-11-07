@@ -53,7 +53,7 @@ public class GestionDeLaNoche {
     }
 
     @Transactional
-    public void quitar(String incidenciaId) {
+    public void quitar(Long incidenciaId) {
         Incidencia i = incidencias.findById(incidenciaId)
                 .orElseThrow(() -> new NocheRechazada("Esa incidencia no existe."));
         incidencias.delete(i);

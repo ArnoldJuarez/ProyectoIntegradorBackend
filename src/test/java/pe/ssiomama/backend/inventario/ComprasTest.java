@@ -36,24 +36,24 @@ class ComprasTest {
     @Autowired
     private EntityManager em;
 
-    private String proveedor() {
-        return jdbc.queryForObject("select id from \"Proveedor\" order by nombre limit 1", String.class);
+    private Long proveedor() {
+        return jdbc.queryForObject("select id from \"Proveedor\" order by nombre limit 1", Long.class);
     }
 
-    private String sala() {
-        return jdbc.queryForObject("select id from \"Sala\" order by aforo desc limit 1", String.class);
+    private Long sala() {
+        return jdbc.queryForObject("select id from \"Sala\" order by aforo desc limit 1", Long.class);
     }
 
-    private List<String> dosProductos() {
-        return jdbc.queryForList("select id from \"Producto\" where activo order by sku limit 2", String.class);
+    private List<Long> dosProductos() {
+        return jdbc.queryForList("select id from \"Producto\" where activo order by sku limit 2", Long.class);
     }
 
-    private int stock(String productoId) {
+    private int stock(Long productoId) {
         return jdbc.queryForObject("select stock from \"Producto\" where id = ?", Integer.class, productoId);
     }
 
     private OrdenDeCompra borrador() {
-        List<String> p = dosProductos();
+        List<Long> p = dosProductos();
         return compras.crear(new DatosDeOrden(proveedor(), null, List.of(
                 new LineaDeFormulario(p.get(0), 12, 3500),
                 new LineaDeFormulario(p.get(1), 24, 450))));
@@ -66,14 +66,14 @@ class ComprasTest {
 
         assertThat(orden.getEstado()).isEqualTo(EstadoDeOrden.BORRADOR);
         assertThat(orden.getTotalCentimos()).isEqualTo(12 * 3500 + 24 * 450);
-        assertThat(orden.getCodigo()).startsWith("OC-").hasSize(9);
+        assertThat(orden.getCodigo()).matches("OC-[0-9]{4,}");
     }
 
     @Test
     @DisplayName("recibir mete la mercancía en el almacén, con el código del pedido en el histórico")
     void recibirSumaStock() {
         OrdenDeCompra orden = borrador();
-        List<String> p = dosProductos();
+        List<Long> p = dosProductos();
         em.flush();
         int antes0 = stock(p.get(0));
         int antes1 = stock(p.get(1));
@@ -109,7 +109,7 @@ class ComprasTest {
     @DisplayName("solo se edita un borrador: uno enviado es lo que tiene el proveedor")
     void soloSeEditaElBorrador() {
         OrdenDeCompra orden = borrador();
-        List<String> p = dosProductos();
+        List<Long> p = dosProductos();
         compras.editar(orden.getId(), new DatosDeOrden(proveedor(), null, List.of(new LineaDeFormulario(p.get(0), 6, 3500))));
         assertThat(orden.getTotalCentimos()).isEqualTo(6 * 3500);
 
@@ -122,7 +122,7 @@ class ComprasTest {
     @Test
     @DisplayName("el mismo producto dos veces se rechaza: es un error de tecleo")
     void productoRepetido() {
-        String p = dosProductos().get(0);
+        Long p = dosProductos().get(0);
         assertThatThrownBy(() -> compras.crear(new DatosDeOrden(proveedor(), null, List.of(
                 new LineaDeFormulario(p, 1, 100), new LineaDeFormulario(p, 2, 100)))))
                 .isInstanceOf(AlmacenRechazado.class).hasMessageContaining("repetido");

@@ -58,7 +58,7 @@ public class Recolectores {
     // ── Piezas compartidas ────────────────────────────────────────
 
     record Noche(
-            String id,
+            Long id,
             String slug,
             String titulo,
             String descripcion,
@@ -87,7 +87,7 @@ public class Recolectores {
 
     private static Noche noche(ResultSet rs, int fila) throws SQLException {
         return new Noche(
-                rs.getString("id"),
+                rs.getObject("id", Long.class),
                 rs.getString("slug"),
                 rs.getString("titulo"),
                 rs.getString("descripcion"),
@@ -119,7 +119,7 @@ public class Recolectores {
                 .optional();
     }
 
-    List<Tipo> tiposALaVenta(String eventoId) {
+    List<Tipo> tiposALaVenta(Long eventoId) {
         return sql.sql("""
                 select nombre, "precioCentimos", cantidad, vendidas, "incluyeConsumo", descripcion
                 from "TipoEntrada" where "eventoId" = :id and activo
@@ -137,7 +137,7 @@ public class Recolectores {
     }
 
     /** El cartel, el cabeza primero. */
-    List<Artista> cartel(String eventoId) {
+    List<Artista> cartel(Long eventoId) {
         return sql.sql("""
                 select a.nombre, a.genero, ea."inicioSet", ea."finSet"
                 from "EventoArtista" ea join "Artista" a on a.id = ea."artistaId"
@@ -153,7 +153,7 @@ public class Recolectores {
                 .list();
     }
 
-    private int vendidas(String eventoId) {
+    private int vendidas(Long eventoId) {
         return sql.sql("select coalesce(sum(vendidas), 0) from \"TipoEntrada\" where \"eventoId\" = :id")
                 .param("id", eventoId)
                 .query(Integer.class)
@@ -304,7 +304,7 @@ public class Recolectores {
 
     /** Las noches ya celebradas con gente dentro, con lo que se bebió en cada una. */
     List<ModeloDeDemanda.NocheCelebrada> historico() {
-        record Fila(String id, Instant fecha, int aforo, int asistentes) {}
+        record Fila(Long id, Instant fecha, int aforo, int asistentes) {}
         List<Fila> noches = sql.sql("""
                 select e.id, e."empiezaEn", s.aforo,
                        (select count(*) from "Acceso" a where a."eventoId" = e.id) as asistentes
@@ -313,26 +313,26 @@ public class Recolectores {
                   and exists (select 1 from "Acceso" a where a."eventoId" = e.id)
                 order by e."empiezaEn" desc
                 """.formatted(AHORA))
-                .query((rs, n) -> new Fila(rs.getString("id"), instante(rs, "empiezaEn"),
+                .query((rs, n) -> new Fila(rs.getObject("id", Long.class), instante(rs, "empiezaEn"),
                         rs.getInt("aforo"), rs.getInt("asistentes")))
                 .list();
 
         // El cabeza de cartel primero: su género es el de la noche (`Rasgos.de` toma el primero).
-        Map<String, List<String>> generos = new HashMap<>();
+        Map<Long, List<String>> generos = new HashMap<>();
         sql.sql("""
                 select ea."eventoId", a.genero
                 from "EventoArtista" ea join "Artista" a on a.id = ea."artistaId"
                 where a.genero is not null
                 order by ea."eventoId", ea."cabezaCartel" desc, a.nombre
                 """)
-                .query((rs, n) -> Map.entry(rs.getString(1), rs.getString(2)))
+                .query((rs, n) -> Map.entry(rs.getLong(1), rs.getString(2)))
                 .list()
                 .forEach(e -> {
                     List<String> suyos = generos.computeIfAbsent(e.getKey(), k -> new ArrayList<>());
                     if (!suyos.contains(e.getValue())) suyos.add(e.getValue());
                 });
 
-        Map<String, List<ModeloDeDemanda.Consumo>> consumos = new HashMap<>();
+        Map<Long, List<ModeloDeDemanda.Consumo>> consumos = new HashMap<>();
         sql.sql("""
                 select v."eventoId", p.sku, p.nombre, sum(l.cantidad) as unidades
                 from "LineaVentaBarra" l
@@ -341,7 +341,7 @@ public class Recolectores {
                 where v."eventoId" is not null
                 group by v."eventoId", p.sku, p.nombre
                 """)
-                .query((rs, n) -> Map.entry(rs.getString("eventoId"),
+                .query((rs, n) -> Map.entry(rs.getObject("eventoId", Long.class),
                         new ModeloDeDemanda.Consumo(rs.getString("sku"), rs.getString("nombre"), rs.getInt("unidades"))))
                 .list()
                 .forEach(e -> consumos.computeIfAbsent(e.getKey(), k -> new ArrayList<>()).add(e.getValue()));
@@ -390,7 +390,7 @@ public class Recolectores {
         return Optional.of(String.join("\n", lineas));
     }
 
-    private long entraron(String eventoId) {
+    private long entraron(Long eventoId) {
         return sql.sql("select count(*) from \"Acceso\" where \"eventoId\" = :id")
                 .param("id", eventoId)
                 .query(Long.class)
@@ -441,7 +441,7 @@ public class Recolectores {
             DateTimeFormatter.ofPattern("EEEE", Locale.forLanguageTag("es-PE"));
 
     /** Una noche ya celebrada, con lo que dio de sí. */
-    record Celebrada(String id, String titulo, LocalDate noche, int asistentes, long taquilla, long barra) {}
+    record Celebrada(Long id, String titulo, LocalDate noche, int asistentes, long taquilla, long barra) {}
 
     /**
      * Lo que necesita el programador para proponer noches: qué fechas quedan
@@ -513,7 +513,7 @@ public class Recolectores {
         ocupadas.forEach((d, t) -> lineas.add("- " + d + " (" + DIA_DE_SEMANA.format(d) + "): " + t));
 
         List<Celebrada> celebradas = celebradas();
-        Map<String, Integer> asistentesPorNoche = celebradas.stream()
+        Map<Long, Integer> asistentesPorNoche = celebradas.stream()
                 .collect(Collectors.toMap(Celebrada::id, Celebrada::asistentes));
 
         lineas.add("");
@@ -538,16 +538,16 @@ public class Recolectores {
                 });
 
         // El cartel de todas las noches, el cabeza primero: da el género de cada noche y la cuenta de cada artista.
-        record EnCartel(String eventoId, String artista, String genero, boolean cabeza) {}
+        record EnCartel(Long eventoId, String artista, String genero, boolean cabeza) {}
         List<EnCartel> carteles = sql.sql("""
                 select ea."eventoId", a.nombre, a.genero, ea."cabezaCartel"
                 from "EventoArtista" ea join "Artista" a on a.id = ea."artistaId"
                 order by ea."eventoId", ea."cabezaCartel" desc, a.nombre
                 """)
-                .query((rs, n) -> new EnCartel(rs.getString(1), rs.getString(2), rs.getString(3), rs.getBoolean(4)))
+                .query((rs, n) -> new EnCartel(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getBoolean(4)))
                 .list();
 
-        Map<String, String> generoDeLaNoche = new HashMap<>();
+        Map<Long, String> generoDeLaNoche = new HashMap<>();
         carteles.stream().filter(c -> c.genero() != null)
                 .forEach(c -> generoDeLaNoche.putIfAbsent(c.eventoId(), c.genero()));
 
@@ -641,7 +641,7 @@ public class Recolectores {
                 order by e."empiezaEn" desc
                 """.formatted(AHORA))
                 .query((rs, n) -> new Celebrada(
-                        rs.getString("id"),
+                        rs.getObject("id", Long.class),
                         rs.getString("titulo"),
                         Club.nocheDe(instante(rs, "empiezaEn")),
                         rs.getInt("asistentes"),

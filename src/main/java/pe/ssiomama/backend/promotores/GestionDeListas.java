@@ -37,7 +37,7 @@ public class GestionDeListas {
     }
 
     @Transactional
-    public ListaDeInvitados abrir(String slug, String promotorId, String nombre, int maxInvitados) {
+    public ListaDeInvitados abrir(String slug, Long promotorId, String nombre, int maxInvitados) {
         Evento noche = eventos.findBySlug(slug).orElseThrow(() -> new ListaRechazada("Esa noche no existe."));
         if (noche.getEstado() == EstadoDeEvento.CANCELADO || noche.getEstado() == EstadoDeEvento.CERRADO
                 || noche.getEmpiezaA().plus(MARGEN).isBefore(Instant.now())) {
@@ -56,7 +56,7 @@ public class GestionDeListas {
     }
 
     @Transactional
-    public ListaDeInvitados cambiar(String id, String nombre, int maxInvitados) {
+    public ListaDeInvitados cambiar(Long id, String nombre, int maxInvitados) {
         ListaDeInvitados l = lista(id);
         if (maxInvitados < l.apuntados()) {
             throw new ListaRechazada("Ya hay " + l.apuntados() + " personas apuntadas: el tope no puede quedar por debajo.");
@@ -67,7 +67,7 @@ public class GestionDeListas {
 
     /** Cierra una lista sin estrenar. Si ya entró alguien, es historia del promotor y se queda. */
     @Transactional
-    public void borrar(String id) {
+    public void borrar(Long id) {
         ListaDeInvitados l = lista(id);
         if (l.entraron() > 0) {
             throw new ListaRechazada("Ya entró gente con esta lista: se queda para el cálculo del promotor.");
@@ -77,7 +77,7 @@ public class GestionDeListas {
     }
 
     @Transactional
-    public Invitado apuntar(String listaId, String nombreCompleto, int personas) {
+    public Invitado apuntar(Long listaId, String nombreCompleto, int personas) {
         ListaDeInvitados l = lista(listaId);
         if (l.getEvento().getEmpiezaA().plus(MARGEN).isBefore(Instant.now())) {
             throw new ListaRechazada("La noche ya pasó: no se apunta a nadie más.");
@@ -96,7 +96,7 @@ public class GestionDeListas {
     }
 
     @Transactional
-    public void quitar(String invitadoId) {
+    public void quitar(Long invitadoId) {
         Invitado i = invitado(invitadoId);
         if (i.isEntro()) {
             throw new ListaRechazada(i.getNombreCompleto() + " ya entró: no se puede quitar de la lista.");
@@ -106,17 +106,17 @@ public class GestionDeListas {
     }
 
     @Transactional
-    public Invitado marcarEntrada(String invitadoId, boolean entro) {
+    public Invitado marcarEntrada(Long invitadoId, boolean entro) {
         Invitado i = invitado(invitadoId);
         i.marcarEntrada(entro, Instant.now());
         return i;
     }
 
-    private ListaDeInvitados lista(String id) {
+    private ListaDeInvitados lista(Long id) {
         return listas.buscarConInvitados(id).orElseThrow(() -> new ListaRechazada("Esa lista no existe."));
     }
 
-    private Invitado invitado(String id) {
+    private Invitado invitado(Long id) {
         return invitados.buscarConLista(id).orElseThrow(() -> new ListaRechazada("Esa fila no existe."));
     }
 }

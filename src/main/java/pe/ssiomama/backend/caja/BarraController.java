@@ -54,22 +54,22 @@ public class BarraController {
             @Max(value = 10_000_000, message = "Ese fondo no parece real")
             int fondoCentimos,
             /** En qué barra. Vacío: la de su puesto, o la única que haya. */
-            String barraId) {}
+            Long barraId) {}
 
     public record Cierre(
-            @NotBlank(message = "Falta la caja") String arqueoId,
+            @NotNull(message = "Falta la caja") Long arqueoId,
             @Min(value = 0, message = "Lo contado no puede ser negativo")
             @Max(value = 100_000_000, message = "Esa cantidad no parece real")
             int contadoCentimos) {}
 
     public record LineaACobrar(
-            @NotBlank(message = "Falta el producto") String productoId,
+            @NotNull(message = "Falta el producto") Long productoId,
             @Min(value = 1, message = "Las cantidades son de una unidad o más")
             @Max(value = 500, message = "Esa cantidad no parece real")
             int cantidad) {}
 
     public record Cobro(
-            @NotBlank(message = "Falta la caja") String arqueoId,
+            @NotNull(message = "Falta la caja") Long arqueoId,
             @NotNull(message = "Falta el método de pago") MetodoDePago metodoDePago,
             /** La noche que se celebra, si la hay. Puede venir vacío. */
             String eventoSlug,
@@ -79,7 +79,7 @@ public class BarraController {
 
     /** Un producto tal y como se pinta en la rejilla de la barra. */
     public record BotonDeProducto(
-            String id,
+            Long id,
             String nombre,
             String sku,
             UnidadDeProducto unidad,
@@ -107,7 +107,7 @@ public class BarraController {
      *     cobrado en efectivo. No incluye tarjeta ni Yape, que van al banco.
      */
     public record TurnoAbierto(
-            String id,
+            Long id,
             String sala,
             /** Nula en turnos viejos sin barra atribuida. */
             String barra,
@@ -135,7 +135,7 @@ public class BarraController {
      *     enseña entonces el formulario de apertura
      * @param noche la que se celebra ahora, para colgarle las ventas
      */
-    public record BarraParaElegir(String id, String nombre) {}
+    public record BarraParaElegir(Long id, String nombre) {}
 
     /**
      * @param barras dónde se puede abrir turno. Con una sola, la pantalla no
@@ -150,7 +150,7 @@ public class BarraController {
 
     /** El resultado de cerrar: lo que se firma. */
     public record TurnoCerrado(
-            String id,
+            Long id,
             int fondoCentimos,
             int esperadoCentimos,
             int contadoCentimos,

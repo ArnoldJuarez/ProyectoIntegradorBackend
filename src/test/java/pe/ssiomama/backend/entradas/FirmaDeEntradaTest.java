@@ -9,12 +9,12 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 /**
- * Paridad con la implementación de Node.
+ * La firma de los QR.
  *
- * <p>Los valores esperados no están escritos a mano: salen de ejecutar
- * {@code lib/tickets.ts} con el mismo secreto de prueba. Mientras estos casos
- * pasen, un QR emitido por el Next.js valida en el backend Java y al revés, que
- * es lo que permite migrar la puerta sin reemitir las entradas vendidas.
+ * <p>El algoritmo es el de siempre (HMAC-SHA256, base64url sin relleno,
+ * recortado a 24): los valores esperados de los vectores salen de ejecutar
+ * {@code lib/tickets.ts} con el mismo secreto de prueba. Lo que cambió es lo que
+ * se firma: el id numérico de la entrada.
  *
  * <p>Se usa un secreto de prueba y no el real justamente para que este archivo
  * pueda vivir en git.
@@ -31,41 +31,58 @@ class FirmaDeEntradaTest {
         "abc,                     CAMiD_oPdtL_KThc2LeTMbYV",
         "DSC-000001,              BY4Hmc3jcyo6cQk0h6kk641w",
     })
-    @DisplayName("produce la misma firma que Node")
-    void produceLaMismaFirmaQueNode(String id, String firmaEsperada) {
-        assertEquals(id + "." + firmaEsperada, firma.codificar(id));
+    @DisplayName("el algoritmo produce la misma firma que Node")
+    void produceLaMismaFirmaQueNode(String texto, String firmaEsperada) {
+        assertEquals(firmaEsperada, firma.firmar(texto));
     }
 
     /**
-     * Un id con acentos revienta si alguien deja que la JVM elija el charset: en
-     * Windows el charset por defecto no es UTF-8 y la firma saldría distinta.
+     * Un texto con acentos revienta si alguien deja que la JVM elija el charset:
+     * en Windows el charset por defecto no es UTF-8 y la firma saldría distinta.
      */
     @Test
     @DisplayName("firma igual que Node con caracteres no ASCII")
     void firmaIgualQueNodeConAcentos() {
-        assertEquals(
-                "ñandú-áéíóú.5zpZNbgGNPlG4fMgPZFEPcBC",
-                firma.codificar("ñandú-áéíóú"));
+        assertEquals("5zpZNbgGNPlG4fMgPZFEPcBC", firma.firmar("ñandú-áéíóú"));
+    }
+
+    @Test
+    @DisplayName("el codigo es el id, un punto y la firma del id")
+    void formaDelCodigo() {
+        assertEquals("1543." + firma.firmar("1543"), firma.codificar(1543L));
     }
 
     @Test
     @DisplayName("un codigo valido se decodifica al id original")
     void idaYVuelta() {
-        String id = "ckt1a2b3c4d5e6f7g8h9i0j";
+        Long id = 18_314L;
         assertEquals(id, firma.decodificar(firma.codificar(id)));
     }
 
     @Test
     @DisplayName("una firma manipulada se rechaza")
     void rechazaFirmaManipulada() {
-        // Una sola letra cambiada al final de la firma.
-        assertNull(firma.decodificar("ckt1a2b3c4d5e6f7g8h9i0j.Ss-kaQELDtEbynn8phMS53q7"));
+        String codigo = firma.codificar(42L);
+        String ultima = codigo.substring(codigo.length() - 1);
+        String manipulado = codigo.substring(0, codigo.length() - 1) + ("A".equals(ultima) ? "B" : "A");
+        assertNull(firma.decodificar(manipulado));
     }
 
     @Test
     @DisplayName("un id cambiado con la firma de otro se rechaza")
     void rechazaIdCambiado() {
-        assertNull(firma.decodificar("otro-id-cualquiera.Ss-kaQELDtEbynn8phMS53q6"));
+        String deLa42 = firma.codificar(42L);
+        assertNull(firma.decodificar("43" + deLa42.substring(deLa42.indexOf('.'))));
+    }
+
+    /**
+     * Un QR emitido antes de los ids numéricos tiene la firma bien hecha (mismo
+     * secreto, mismo algoritmo), pero su id era un texto que ya no existe.
+     */
+    @Test
+    @DisplayName("un QR con id de texto del sistema anterior se rechaza")
+    void rechazaIdDeTexto() {
+        assertNull(firma.decodificar("ckt1a2b3c4d5e6f7g8h9i0j.Ss-kaQELDtEbynn8phMS53q6"));
     }
 
     /**
@@ -76,8 +93,9 @@ class FirmaDeEntradaTest {
     @Test
     @DisplayName("una firma de otra longitud se rechaza sin reventar")
     void rechazaFirmaDeOtraLongitud() {
-        assertNull(firma.decodificar("ckt1a2b3c4d5e6f7g8h9i0j.corta"));
-        assertNull(firma.decodificar("ckt1a2b3c4d5e6f7g8h9i0j.Ss-kaQELDtEbynn8phMS53q6xxxxxx"));
+        String codigo = firma.codificar(7L);
+        assertNull(firma.decodificar("7.corta"));
+        assertNull(firma.decodificar(codigo + "xxxxxx"));
     }
 
     @Test
@@ -86,15 +104,5 @@ class FirmaDeEntradaTest {
         assertNull(firma.decodificar("sinpunto"));
         assertNull(firma.decodificar(""));
         assertNull(firma.decodificar(null));
-    }
-
-    /**
-     * El id puede llevar puntos: hay que partir por el último, no por el primero.
-     */
-    @Test
-    @DisplayName("respeta ids que contienen puntos")
-    void respetaIdsConPuntos() {
-        String id = "evento.2026.entrada";
-        assertEquals(id, firma.decodificar(firma.codificar(id)));
     }
 }

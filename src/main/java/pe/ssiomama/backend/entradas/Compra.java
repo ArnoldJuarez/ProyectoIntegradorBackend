@@ -3,7 +3,6 @@ package pe.ssiomama.backend.entradas;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
@@ -113,7 +112,7 @@ public class Compra {
     // ── Lo que pide quien compra ──────────────────────────────────
 
     /** Una línea de la petición: qué tipo y cuántas. */
-    public record Peticion(String tipoDeEntradaId, int cantidad) {}
+    public record Peticion(Long tipoDeEntradaId, int cantidad) {}
 
     /** Los datos de contacto de quien compra. */
     public record Comprador(String nombre, String apellido, String email, String telefono) {}
@@ -165,7 +164,7 @@ public class Compra {
             throw new CompraRechazada("Esta fecha no está a la venta.");
         }
 
-        Map<String, TipoDeEntrada> porId = cargarTiposDelEvento(evento, peticiones);
+        Map<Long, TipoDeEntrada> porId = cargarTiposDelEvento(evento, peticiones);
 
         // Primero se comprueba todo y luego se toca algo. Reservar sobre la
         // marcha dejaría cupo apartado de las líneas buenas cuando falla la
@@ -233,12 +232,11 @@ public class Compra {
         for (LineaDePedido linea : pedido.getLineas()) {
             for (int i = 0; i < linea.getCantidad(); i++) {
                 /*
-                 * El id se genera aquí porque el código del QR es `id.firma`:
-                 * hay que conocerlo antes de insertar. Con un id que pusiera la
-                 * base habría que insertar y actualizar después, y la entrada
-                 * existiría un instante sin código.
+                 * El número se reserva antes de insertar porque el código del
+                 * QR es `id.firma`: hay que conocerlo para firmarlo. Insertando
+                 * primero, la entrada existiría un instante sin código.
                  */
-                String id = UUID.randomUUID().toString();
+                Long id = entradas.reservarId();
                 entradas.save(Entrada.emitir(
                         pedido, linea.getTipoDeEntrada(), id, firma.codificar(id), titular, ahora));
                 emitidas++;
@@ -279,10 +277,10 @@ public class Compra {
      * «ese tipo es de otro evento» le confirmaría a quien lo está intentando que
      * el id existe.
      */
-    private Map<String, TipoDeEntrada> cargarTiposDelEvento(
+    private Map<Long, TipoDeEntrada> cargarTiposDelEvento(
             Evento evento, List<Peticion> peticiones) {
 
-        List<String> ids = peticiones.stream().map(Peticion::tipoDeEntradaId).distinct().toList();
+        List<Long> ids = peticiones.stream().map(Peticion::tipoDeEntradaId).distinct().toList();
         if (ids.size() != peticiones.size()) {
             throw new CompraRechazada("Hay un tipo de entrada repetido en el pedido.");
         }

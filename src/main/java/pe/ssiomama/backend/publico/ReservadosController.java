@@ -1,6 +1,7 @@
 package pe.ssiomama.backend.publico;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -58,7 +59,7 @@ public class ReservadosController {
     }
 
     public record MesaDisponible(
-            String id,
+            Long id,
             String nombre,
             String zona,
             int plazas,
@@ -67,7 +68,7 @@ public class ReservadosController {
 
     public record Solicitud(
             @NotBlank(message = "Falta la noche") String slug,
-            @NotBlank(message = "Elige un reservado") String mesaId,
+            @NotNull(message = "Elige un reservado") Long mesaId,
             @Min(value = 1, message = "Dinos cuántos venís")
             @Max(value = 30, message = "Para grupos de más de 30 llámanos")
             int personas,
@@ -84,7 +85,7 @@ public class ReservadosController {
             @Size(min = 6, max = 30, message = "Ese teléfono no parece completo")
             String telefono) {}
 
-    public record Respuesta(String id, String mensaje) {}
+    public record Respuesta(Long id, String mensaje) {}
 
     /**
      * Los reservados de una noche, marcando cuáles siguen libres.
@@ -100,7 +101,7 @@ public class ReservadosController {
         cartelera.buscarPublicaPorSlug(slug)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
-        Set<String> pedidas =
+        Set<Long> pedidas =
                 Set.copyOf(reservas.idsDeMesasPedidas(slug, EstadoDeReserva.CANCELADO));
 
         return mesas.buscarDisponibles().stream()

@@ -43,17 +43,17 @@ public class ChatController {
             @Size(max = 4000) String contenido) {}
 
     public record Pregunta(
-            @Size(max = 64) String sesionId,
+            Long sesionId,
             @NotBlank(message = "Escribe una pregunta.")
             @Size(max = 1000, message = "La pregunta es demasiado larga.") String mensaje,
             @Size(max = 20) List<@Valid TurnoPrevio> historial) {}
 
-    public record Contestacion(String sesionId, String respuesta) {}
+    public record Contestacion(Long sesionId, String respuesta) {}
 
     @PostMapping("/api/publico/chat")
     public Contestacion preguntar(@Valid @RequestBody Pregunta pregunta) {
         String mensaje = pregunta.mensaje().trim();
-        String sesion = registro.sesionDeChat(pregunta.sesionId());
+        Long sesion = registro.sesionDeChat(pregunta.sesionId());
         registro.guardarMensaje(sesion, "user", mensaje, null);
 
         List<Conserje.Turno> historial = new ArrayList<>();

@@ -84,14 +84,14 @@ class ProgramacionHttpTest {
         return conSesion;
     }
 
-    private String salaPrincipal() {
+    private Long salaPrincipal() {
         return jdbc.queryForObject(
-                "select id from \"Sala\" order by aforo desc limit 1", String.class);
+                "select id from \"Sala\" order by aforo desc limit 1", Long.class);
     }
 
     private String cuerpoDeNoche(String titulo) {
         return """
-                {"titulo":"%s","descripcion":"Creada por un test.","salaId":"%s",
+                {"titulo":"%s","descripcion":"Creada por un test.","salaId":%s,
                  "puertasA":"2027-04-02T01:00:00Z","terminaA":"2027-04-02T07:00:00Z",
                  "edadMinima":18,"vestimenta":"Casual","estado":"BORRADOR","artistaIds":[]}
                 """
@@ -160,7 +160,7 @@ class ProgramacionHttpTest {
                 String.class);
         assertThat(tipo.getStatusCode()).isEqualTo(HttpStatus.CREATED);
 
-        String tipoId = json.readTree(tipo.getBody()).get("id").asText();
+        Long tipoId = json.readTree(tipo.getBody()).get("id").asLong();
 
         // Y se cambia el título: la dirección tiene que seguir siendo la misma.
         var editada = http.exchange(
@@ -221,7 +221,7 @@ class ProgramacionHttpTest {
                 HttpMethod.PUT,
                 new HttpEntity<>(
                         """
-                        {"titulo":"Viernes Urbano","descripcion":"","salaId":"%s",
+                        {"titulo":"Viernes Urbano","descripcion":"","salaId":%s,
                          "puertasA":"2027-12-01T01:00:00Z","terminaA":"2027-12-01T07:00:00Z",
                          "edadMinima":18,"vestimenta":"","estado":"PUBLICADO","artistaIds":[]}
                         """

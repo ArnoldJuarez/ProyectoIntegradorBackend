@@ -64,14 +64,14 @@ public class PortadaPublicaController {
                         rs.getString("zona"), rs.getInt("plazas"), rs.getInt("consumoMinimoCentimos"), rs.getInt("cuantos")))
                 .list();
 
-        Map<String, SalaPublica> salas = new LinkedHashMap<>();
+        Map<Long, SalaPublica> salas = new LinkedHashMap<>();
         sql.sql("""
                 select s.id, s.nombre, s.aforo, s.descripcion, z.nombre as zona, z.aforo as "aforoZona"
                 from "Sala" s left join "Zona" z on z."salaId" = s.id
                 order by s.aforo desc, z.orden
                 """)
                 .query((rs, n) -> {
-                    SalaPublica sala = salas.computeIfAbsent(rs.getString("id"), id -> {
+                    SalaPublica sala = salas.computeIfAbsent(rs.getObject("id", Long.class), id -> {
                         try {
                             return new SalaPublica(rs.getString("nombre"), rs.getInt("aforo"),
                                     rs.getString("descripcion"), new ArrayList<>());

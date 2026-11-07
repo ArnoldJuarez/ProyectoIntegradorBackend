@@ -6,11 +6,12 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
-import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -39,8 +40,9 @@ import org.hibernate.type.SqlTypes;
 public class Campania {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    private String id;
+    private Long id;
 
     @Column(name = "nombre", nullable = false)
     private String nombre;
@@ -109,7 +111,6 @@ public class Campania {
             String cuerpo) {
 
         Campania c = new Campania();
-        c.id = UUID.randomUUID().toString();
         c.nombre = nombre;
         c.canal = canal;
         c.segmento = segmento;
@@ -141,7 +142,7 @@ public class Campania {
         return estado.sePuedeTocar();
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 

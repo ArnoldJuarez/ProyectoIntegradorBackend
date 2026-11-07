@@ -20,28 +20,28 @@ import java.util.Objects;
 public class ActuacionId implements Serializable {
 
     @Column(name = "eventoId", nullable = false)
-    private String eventoId;
+    private Long eventoId;
 
     @Column(name = "artistaId", nullable = false)
-    private String artistaId;
+    private Long artistaId;
 
     protected ActuacionId() {
         // Hibernate necesita un constructor sin argumentos.
     }
 
     /** La clave de una actuación concreta. */
-    static ActuacionId de(String eventoId, String artistaId) {
+    static ActuacionId de(Long eventoId, Long artistaId) {
         ActuacionId id = new ActuacionId();
         id.eventoId = eventoId;
         id.artistaId = artistaId;
         return id;
     }
 
-    public String getEventoId() {
+    public Long getEventoId() {
         return eventoId;
     }
 
-    public String getArtistaId() {
+    public Long getArtistaId() {
         return artistaId;
     }
 

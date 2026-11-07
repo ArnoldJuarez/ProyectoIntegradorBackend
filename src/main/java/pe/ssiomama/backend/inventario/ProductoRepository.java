@@ -5,7 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 /** Acceso a {@code "Producto"}. Equivale a las consultas Prisma del panel. */
-public interface ProductoRepository extends JpaRepository<Producto, String> {
+public interface ProductoRepository extends JpaRepository<Producto, Long> {
 
     /** Los productos que están a la venta, en el orden en que se listan en el panel. */
     List<Producto> findByActivoTrueOrderByNombreAsc();

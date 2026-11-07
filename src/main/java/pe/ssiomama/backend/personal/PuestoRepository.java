@@ -4,7 +4,7 @@ import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 /** Acceso a {@code "Puesto"}. */
-public interface PuestoRepository extends JpaRepository<Puesto, String> {
+public interface PuestoRepository extends JpaRepository<Puesto, Long> {
 
     List<Puesto> findAllByOrderByNombreAsc();
 

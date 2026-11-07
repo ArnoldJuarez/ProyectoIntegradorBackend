@@ -1,6 +1,7 @@
 package pe.ssiomama.backend.publico;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -76,7 +77,7 @@ public class CompraController {
     // ── Lo que entra ──────────────────────────────────────────────
 
     public record LineaPedida(
-            @NotBlank(message = "Falta el tipo de entrada") String tipoDeEntradaId,
+            @NotNull(message = "Falta el tipo de entrada") Long tipoDeEntradaId,
             @Min(value = 1, message = "Las cantidades son de una entrada o más")
             @Max(value = 10, message = "Máximo 10 entradas del mismo tipo")
             int cantidad) {}

@@ -82,8 +82,8 @@ class CrmHttpTest {
                 String.class);
     }
 
-    private String unSegmentoId(HttpHeaders sesion) throws Exception {
-        return json.readTree(segmentos(sesion).getBody()).get(0).get("id").asText();
+    private Long unSegmentoId(HttpHeaders sesion) throws Exception {
+        return json.readTree(segmentos(sesion).getBody()).get(0).get("id").asLong();
     }
 
     // ── Permisos ──────────────────────────────────────────────────
@@ -182,7 +182,7 @@ class CrmHttpTest {
                 "/api/clientes/campanias",
                 new HttpEntity<>(
                         """
-                        {"nombre":"%sVuelve este viernes","canal":"CORREO","segmentoId":"%s",
+                        {"nombre":"%sVuelve este viernes","canal":"CORREO","segmentoId":%s,
                          "asunto":"Te echamos de menos","cuerpo":"Este viernes tenemos reguetón."}
                         """
                                 .formatted(MARCA, unSegmentoId(sesion)),
@@ -207,7 +207,7 @@ class CrmHttpTest {
                 "/api/clientes/campanias",
                 new HttpEntity<>(
                         """
-                        {"nombre":"%sSin asunto","canal":"CORREO","segmentoId":"%s",
+                        {"nombre":"%sSin asunto","canal":"CORREO","segmentoId":%s,
                          "asunto":"","cuerpo":"El cuerpo sí está."}
                         """
                                 .formatted(MARCA, unSegmentoId(sesion)),
@@ -227,7 +227,7 @@ class CrmHttpTest {
                 "/api/clientes/campanias",
                 new HttpEntity<>(
                         """
-                        {"nombre":"%sVacía","canal":"SMS","segmentoId":"%s","cuerpo":""}
+                        {"nombre":"%sVacía","canal":"SMS","segmentoId":%s,"cuerpo":""}
                         """
                                 .formatted(MARCA, unSegmentoId(sesion)),
                         sesion),
@@ -242,11 +242,11 @@ class CrmHttpTest {
     void cancelar() throws Exception {
         HttpHeaders sesion = sesionDe("admin@ssiomama.test");
 
-        String id = json.readTree(http.postForEntity(
+        Long id = json.readTree(http.postForEntity(
                                 "/api/clientes/campanias",
                                 new HttpEntity<>(
                                         """
-                                        {"nombre":"%sSe cancela","canal":"SMS","segmentoId":"%s",
+                                        {"nombre":"%sSe cancela","canal":"SMS","segmentoId":%s,
                                          "cuerpo":"Texto corto."}
                                         """
                                                 .formatted(MARCA, unSegmentoId(sesion)),
@@ -254,7 +254,7 @@ class CrmHttpTest {
                                 String.class)
                         .getBody())
                 .get("id")
-                .asText();
+                .asLong();
 
         var r = http.exchange(
                 "/api/clientes/campanias/" + id,
@@ -272,7 +272,7 @@ class CrmHttpTest {
                         new HttpEntity<>(sesion),
                         String.class)
                 .getBody();
-        assertThat(lista).contains(id);
+        assertThat(lista).contains("\"id\":" + id);
     }
 
     @Test

@@ -67,7 +67,7 @@ public class GestionDeReservas {
     /** Quién pide qué. Igual venga de la web o de quien atiende el teléfono. */
     public record Solicitud(
             String slug,
-            String mesaId,
+            Long mesaId,
             int personas,
             String notas,
             String nombre,
@@ -153,7 +153,7 @@ public class GestionDeReservas {
      * clic en la fila equivocada.
      */
     @Transactional
-    public Reserva cambiar(String id, EstadoDeReserva estado, int depositoCentimos, String notas) {
+    public Reserva cambiar(Long id, EstadoDeReserva estado, int depositoCentimos, String notas) {
         Reserva r = reservas.buscarCompleta(id)
                 .orElseThrow(() -> new ReservaRechazada("Esa reserva no existe."));
 

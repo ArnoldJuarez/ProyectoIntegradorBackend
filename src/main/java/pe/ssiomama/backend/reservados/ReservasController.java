@@ -59,7 +59,7 @@ public class ReservasController {
     /** Una reserva apuntada a mano, normalmente tras una llamada o un WhatsApp. */
     public record NuevaReserva(
             @NotBlank(message = "Elige la noche") String slug,
-            @NotBlank(message = "Elige un box") String mesaId,
+            @NotNull(message = "Elige un box") Long mesaId,
             @Min(value = 1, message = "¿Cuántas personas?") @Max(value = 30, message = "Más de 30 no caben en un box")
             int personas,
             @Size(max = 500, message = "Las notas son demasiado largas") String notas,
@@ -84,7 +84,7 @@ public class ReservasController {
     // ── Lo que sale ───────────────────────────────────────────────
 
     public record ReservaEnLista(
-            String id,
+            Long id,
             String noche,
             String nocheSlug,
             Instant empiezaA,
@@ -93,7 +93,7 @@ public class ReservasController {
             int plazas,
             int consumoMinimoCentimos,
             String cliente,
-            String clienteId,
+            Long clienteId,
             String telefono,
             String email,
             int personas,
@@ -127,7 +127,7 @@ public class ReservasController {
 
     public record NocheReservable(String slug, String titulo, Instant empiezaA) {}
 
-    public record BoxDelLocal(String id, String nombre, String zona, int plazas, int consumoMinimoCentimos) {}
+    public record BoxDelLocal(Long id, String nombre, String zona, int plazas, int consumoMinimoCentimos) {}
 
     public record OpcionesDeReserva(List<NocheReservable> noches, List<BoxDelLocal> boxes) {}
 
@@ -185,7 +185,7 @@ public class ReservasController {
 
     @PutMapping("/{id}")
     @Transactional
-    public ReservaEnLista cambiar(@PathVariable String id, @Valid @RequestBody CambioDeReserva c) {
+    public ReservaEnLista cambiar(@PathVariable Long id, @Valid @RequestBody CambioDeReserva c) {
         return ReservaEnLista.de(gestion.cambiar(id, c.estado(), c.depositoCentimos(), c.notas()));
     }
 }

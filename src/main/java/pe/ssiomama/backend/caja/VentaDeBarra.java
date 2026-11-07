@@ -7,6 +7,8 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
@@ -14,7 +16,6 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import pe.ssiomama.backend.eventos.Evento;
@@ -34,8 +35,9 @@ import pe.ssiomama.backend.eventos.Evento;
 public class VentaDeBarra {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    private String id;
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "sesionCajaId", nullable = false)
@@ -83,7 +85,6 @@ public class VentaDeBarra {
      */
     static VentaDeBarra registrar(ArqueoDeCaja arqueo, Evento evento, MetodoDePago metodo) {
         VentaDeBarra v = new VentaDeBarra();
-        v.id = UUID.randomUUID().toString();
         v.arqueo = arqueo;
         v.evento = evento;
         v.metodoDePago = metodo;
@@ -111,7 +112,7 @@ public class VentaDeBarra {
         return metodoDePago.esEfectivo();
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 

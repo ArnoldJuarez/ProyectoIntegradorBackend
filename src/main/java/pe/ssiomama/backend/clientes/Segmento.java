@@ -3,6 +3,8 @@ package pe.ssiomama.backend.clientes;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -36,8 +38,9 @@ import org.hibernate.type.SqlTypes;
 public class Segmento {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    private String id;
+    private Long id;
 
     @Column(name = "nombre", nullable = false)
     private String nombre;
@@ -66,7 +69,7 @@ public class Segmento {
         // Hibernate necesita un constructor sin argumentos.
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 

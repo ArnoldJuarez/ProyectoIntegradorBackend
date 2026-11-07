@@ -4,7 +4,7 @@ import java.util.List;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface InteraccionRepository extends JpaRepository<Interaccion, String> {
+public interface InteraccionRepository extends JpaRepository<Interaccion, Long> {
 
     /**
      * El historial de un cliente, de lo más reciente a lo más antiguo.
@@ -13,5 +13,5 @@ public interface InteraccionRepository extends JpaRepository<Interaccion, String
      * viniendo puede acumular cientos de líneas, y la ficha solo necesita las
      * últimas para contar quién es.
      */
-    List<Interaccion> findByClienteIdOrderByOcurrioEnDesc(String clienteId, Pageable pagina);
+    List<Interaccion> findByClienteIdOrderByOcurrioEnDesc(Long clienteId, Pageable pagina);
 }

@@ -6,13 +6,14 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
-import java.util.UUID;
 import pe.ssiomama.backend.auth.Usuario;
 import pe.ssiomama.backend.eventos.Sala;
 
@@ -35,8 +36,9 @@ import pe.ssiomama.backend.eventos.Sala;
 public class MovimientoDeInventario {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
-    private String id;
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "productoId", nullable = false)
@@ -108,7 +110,6 @@ public class MovimientoDeInventario {
     public static MovimientoDeInventario porVentaDeBarra(
             Producto producto, Sala sala, int unidades, String referencia, Usuario quien) {
         MovimientoDeInventario m = new MovimientoDeInventario();
-        m.id = UUID.randomUUID().toString();
         m.producto = producto;
         m.sala = sala;
         m.tipo = TipoDeMovimiento.VENTA;
@@ -145,7 +146,6 @@ public class MovimientoDeInventario {
             Usuario quien) {
 
         MovimientoDeInventario m = new MovimientoDeInventario();
-        m.id = UUID.randomUUID().toString();
         m.producto = producto;
         m.sala = sala;
         m.tipo = tipo;
@@ -179,7 +179,7 @@ public class MovimientoDeInventario {
         return (long) unidadesMovidas() * costeUnitarioCentimos;
     }
 
-    public String getId() {
+    public Long getId() {
         return id;
     }
 

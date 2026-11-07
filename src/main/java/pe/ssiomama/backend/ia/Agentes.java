@@ -51,7 +51,7 @@ public class Agentes {
             String instruccion) {}
 
     /** Lo que deja una ejecución. */
-    public record Resultado(String ejecucionId, String propuestaId, String mensaje) {}
+    public record Resultado(Long ejecucionId, Long propuestaId, String mensaje) {}
 
     private final Map<ClaveDeAgente, Definicion> definiciones = new LinkedHashMap<>();
     private final ClienteDeModelo modelo;
@@ -231,7 +231,7 @@ public class Agentes {
      * @throws IaNoDisponible si el proveedor no contesta
      * @throws IaSinFormato si el modelo no da un JSON válido en tres intentos
      */
-    public Resultado ejecutar(ClaveDeAgente clave, Disparador disparador, String lanzadoPorId) {
+    public Resultado ejecutar(ClaveDeAgente clave, Disparador disparador, Long lanzadoPorId) {
         return ejecutar(clave, disparador, lanzadoPorId, null);
     }
 
@@ -245,7 +245,7 @@ public class Agentes {
      * @param datos nulo para usar el recolector del agente
      */
     public Resultado ejecutar(
-            ClaveDeAgente clave, Disparador disparador, String lanzadoPorId, Supplier<Optional<String>> datos) {
+            ClaveDeAgente clave, Disparador disparador, Long lanzadoPorId, Supplier<Optional<String>> datos) {
         Definicion d = definicion(clave).orElseThrow(() ->
                 new AgenteSinDatos("No existe el agente «" + clave.etiqueta() + "»."));
         Supplier<Optional<String>> recolector = datos == null ? d.recolector() : datos;
@@ -260,7 +260,7 @@ public class Agentes {
         }
 
         Motor motor = d.prosa() ? motores.prosa() : motores.numeros();
-        String ejecucion = registro.abrirEjecucion(
+        Long ejecucion = registro.abrirEjecucion(
                 clave, disparador, lanzadoPorId, Map.of("context", contexto), motor.modelo());
 
         try {
@@ -271,7 +271,7 @@ public class Agentes {
                     clave.etiqueta().replace('-', '_'),
                     d.esquema());
 
-            String propuesta = registro.proponer(ejecucion, d.tipoDePropuesta(), r.valor());
+            Long propuesta = registro.proponer(ejecucion, d.tipoDePropuesta(), r.valor());
             registro.completarEjecucion(
                     ejecucion, r.valor(), r.tokensEntrada(), r.tokensSalida(),
                     motores.costeCentimos(r.tokensEntrada(), r.tokensSalida()), r.intentos());

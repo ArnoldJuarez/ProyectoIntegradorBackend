@@ -59,16 +59,16 @@ class BarraTest {
     }
 
     /** Un producto activo cualquiera, el primero por nombre. */
-    private String unProducto() {
+    private Long unProducto() {
         return jdbc.queryForObject(
                 "select id from \"Producto\" where activo = true order by nombre limit 1",
-                String.class);
+                Long.class);
     }
 
-    private String otroProducto() {
+    private Long otroProducto() {
         return jdbc.queryForObject(
                 "select id from \"Producto\" where activo = true order by nombre offset 1 limit 1",
-                String.class);
+                Long.class);
     }
 
     /** Simula una petición nueva: sin esto, lo escrito no se relee de la base. */
@@ -162,7 +162,7 @@ class BarraTest {
     void soloElEfectivoLlegaAlCajon() {
         var turno = barra.abrirTurno(deLaBarra(), 20_000);
         comoUnaPeticionNueva();
-        String producto = unProducto();
+        Long producto = unProducto();
 
         var enEfectivo = barra.cobrar(
                 deLaBarra(), turno.getId(), MetodoDePago.EFECTIVO, null,
@@ -186,7 +186,7 @@ class BarraTest {
         var turno = barra.abrirTurno(deLaBarra(), 20_000);
         comoUnaPeticionNueva();
 
-        String producto = unProducto();
+        Long producto = unProducto();
         int stockAntes = productos.findById(producto).orElseThrow().getStock();
 
         var hecha = barra.cobrar(
@@ -221,7 +221,7 @@ class BarraTest {
         var turno = barra.abrirTurno(deLaBarra(), 20_000);
         comoUnaPeticionNueva();
 
-        String producto = unProducto();
+        Long producto = unProducto();
         int stockAntes = productos.findById(producto).orElseThrow().getStock();
 
         var hecha = barra.cobrar(
@@ -259,7 +259,7 @@ class BarraTest {
         var turno = barra.abrirTurno(deLaBarra(), 20_000);
         comoUnaPeticionNueva();
 
-        String producto = unProducto();
+        Long producto = unProducto();
         jdbc.update("update \"Producto\" set stock = 0 where id = ?", producto);
         comoUnaPeticionNueva();
 
@@ -280,7 +280,7 @@ class BarraTest {
         var turno = barra.abrirTurno(deLaBarra(), 20_000);
         comoUnaPeticionNueva();
 
-        String producto = unProducto();
+        Long producto = unProducto();
         int precio = productos.findById(producto).orElseThrow().getPrecioCentimos();
 
         var hecha = barra.cobrar(
@@ -305,8 +305,8 @@ class BarraTest {
         var turno = barra.abrirTurno(deLaBarra(), 20_000);
         comoUnaPeticionNueva();
 
-        String uno = unProducto();
-        String otro = otroProducto();
+        Long uno = unProducto();
+        Long otro = otroProducto();
         int precioUno = productos.findById(uno).orElseThrow().getPrecioCentimos();
         int precioOtro = productos.findById(otro).orElseThrow().getPrecioCentimos();
 
@@ -365,12 +365,12 @@ class BarraTest {
         var turno = barra.abrirTurno(deLaBarra(), 20_000);
         comoUnaPeticionNueva();
 
-        String bueno = unProducto();
+        Long bueno = unProducto();
         int stockAntes = productos.findById(bueno).orElseThrow().getStock();
 
         assertThatThrownBy(() -> barra.cobrar(
                         deLaBarra(), turno.getId(), MetodoDePago.EFECTIVO, null,
-                        List.of(new LineaPedida(bueno, 1), new LineaPedida("no-existe", 1))))
+                        List.of(new LineaPedida(bueno, 1), new LineaPedida(999_999_999L, 1))))
                 .isInstanceOf(CajaRechazada.class);
 
         comoUnaPeticionNueva();
@@ -383,7 +383,7 @@ class BarraTest {
     @DisplayName("una caja que no existe se rechaza con su mensaje")
     void cajaInventada() {
         assertThatThrownBy(() -> barra.cobrar(
-                        deLaBarra(), "no-existe", MetodoDePago.EFECTIVO, null,
+                        deLaBarra(), 999_999_999L, MetodoDePago.EFECTIVO, null,
                         List.of(new LineaPedida(unProducto(), 1))))
                 .isInstanceOf(CajaRechazada.class)
                 .hasMessageContaining("no existe");
@@ -401,7 +401,7 @@ class BarraTest {
         var turno = barra.abrirTurno(deLaBarra(), 20_000);
         comoUnaPeticionNueva();
 
-        String producto = unProducto();
+        Long producto = unProducto();
         var efectivo1 = barra.cobrar(
                 deLaBarra(), turno.getId(), MetodoDePago.EFECTIVO, null,
                 List.of(new LineaPedida(producto, 2)));
