@@ -13,7 +13,7 @@ application-local.properties
 .env.local
 
 # ── Flyers subidos desde el panel (datos, no codigo) ─────────
-portadas/
+
 
 # ── Datos de muestra ──────────────────────────────────────────
 # El generador sí va a git; lo que produce no: poblar.sql pesa 21 MB y se
